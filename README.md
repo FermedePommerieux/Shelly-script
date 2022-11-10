@@ -11,7 +11,7 @@ Componment are switch, inputs, ans sensors (humidity, temperature, ...), the are
 
 ```javascript
 Shelly.addStatusHandler(function (message) { 
-  //act as momentary as input:0 by followin the state if switch:0
+  //act as momentary as input:0 by following the state if switch:0
   if (message.component === "switch:0") { // check if it concerns our switch
     if (typeof message.delta.output !== "undefined") { // check if it concerns state event
       Shelly.call("Switch.Set", {'id': 1,'on': message.delta.output}); // follow the state
