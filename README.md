@@ -21,8 +21,11 @@ if (typeof eventMessage.info.event !== "undefined") {print('this eventMessage is
 if (typeof eventMessage.info.componment !== "undefined") {print('this eventMessage concerns a componment')};
 ```
 The componment event eventMessages could then contains the needed attributes:
+
 Input: see https://shelly-api-docs.shelly.cloud/gen2/ComponentsAndServices/Input#status
+
 Switch: see https://shelly-api-docs.shelly.cloud/gen2/ComponentsAndServices/Switch#status
+
 and so on...
 
 
