@@ -28,4 +28,6 @@ Switch: see https://shelly-api-docs.shelly.cloud/gen2/ComponentsAndServices/Swit
 
 and so on...
 
+## Comparing possibilities
 
+Only strict comparing possibilities are available : ===, !==, >, <, nothing more
