@@ -4,12 +4,15 @@ Some Shelly scripts to automate things
 As far i undestand (and how i use it):
 
 ## Events
-```javascript
-Shelly.addEventHandler( function (event) {};)
-```
-The shelly device will create an event per event => this means we must filter the events messages and wait for the one we're waiting for:
 
-event message are object and contain:
+To trigger event it uses the funtion
+```javascript
+Shelly.addEventHandler( function (eventMessage) {your code})
+```
+The shelly device will create an event per event => this means we must filter the events messages and wait for the one we're waiting for.
+
+The eventMessage is an object that could contain an event, and could contains an event related to a componment. it must be filtered
+A componment could be switch or an input
 
 event.info.event
 
