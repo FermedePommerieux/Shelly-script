@@ -11,16 +11,16 @@ Componment are switch, inputs, ans sensors (humidity, temperature, ...), the are
 
 To trigger an event we use the following funtion:
 ```javascript
-Shelly.addEventHandler( function (eventMessage) {your code})
+Shelly.addEventHandler( function (message) {your code})
 ```
-The eventHandler will execute your code and provide the eventMessage every time an event occurs. Note that, the shelly device will create one event message per event.
+The eventHandler will execute your code and provide a 'message' every time an event occurs. Note that, the shelly device will create one event message per event.
 
-The eventMessage is an object that could contain an event, and **could** contains an event related to a componment. **It must be filtered**.
+The 'message' is an object that could contain an event, and **could** contains an event related to a componment. **It must be filtered**.
 ```javascript
-if (typeof eventMessage.info.event !== "undefined") {print('this eventMessage is an event')};
-if (typeof eventMessage.info.componment !== "undefined") {print('this eventMessage concerns a componment')};
+if (typeof message.info.event !== "undefined") {print('this message is an event')};
+if (typeof message.info.componment !== "undefined") {print('this message concerns a componment')};
 ```
-The componment event eventMessages could then contains the needed attributes:
+The componment event 'message' could then contains the needed attributes:
 
 Input: see https://shelly-api-docs.shelly.cloud/gen2/ComponentsAndServices/Input#status
 
