@@ -7,12 +7,16 @@ As far i undestand (and how i use it):
 
 Componment are switch, inputs, ans sensors (humidity, temperature, ...), the are labelled like this 'switch:id' or 'input:0' ...
 
+## Status
+
+aa    avascripta```j
+
 ## Events
 
 To trigger an event we use the following function:
 ```javascript
 Shelly.addEventHandler( function (message) {your code})
-```
+```aa
 The eventHandler will execute your code and provide a 'message' every time an event occurs. Note that, the shelly device will create one event message per event.
 
 The 'message' is an object that could contain an event, and **could** contains an event related to a componment. **It must be filtered**.
