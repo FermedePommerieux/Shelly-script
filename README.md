@@ -9,7 +9,7 @@ Componment are switch, inputs, ans sensors (humidity, temperature, ...), the are
 
 ## Events
 
-To trigger event it uses the funtion
+To trigger an event we use the following funtion:
 ```javascript
 Shelly.addEventHandler( function (eventMessage) {your code})
 ```
