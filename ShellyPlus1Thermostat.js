@@ -1,5 +1,22 @@
-// This script makes ShellyPlus1 act as a MQTT thermostat
-// 
+**/ This script makes ShellyPlus1 act as a MQTT thermostat
+// it will read and publish the following MQTT topics
+// /thermostat/temperature/target
+// /thermostat/
+
+//        CurrentHeatingCoolingState: switchHeatStatus,
+//        TargetHeatingCoolingState: config.name + "/targetState",
+//        CurrentTemperature: sensorCurrentTemperature,
+//        TargetTemperature: config.name + "/targetTemperature",
+
+if (MQTT.isConnected()) return; // exit if no active MQTT connection
+let deviceInfo = Shelly.getDeviceInfo(), targetTemperature=21, targetHeatinCoolingState=true,
+    topicTargetTemperature=deviceInfo.id + '/thermostat/targetTemperature',
+    topicTargetHeatingCoolingState=deviceInfo.id + '/thermostat/targetHeatingCoolingState',
+    topicCurrentHeatingCoolingState=deviceInfo.id + '/thermostat/currrentHeatingCoolingState',
+    topicCurrentTemperature=deviceInfo.id + '/thermostat/currentTemperature';
+// publishing the initial target values
+MQTT.publish(topicTargetHeatingCoolingState, targetHeatingCoolingState, 0, true)
+MQTT.publish(topicTargetTemperature, targetTemperature, 0, true)
 
 // detachs the input : we don't need it
 Shelly.call("Switch.SetConfig", {
@@ -9,20 +26,30 @@ Shelly.call("Switch.SetConfig", {
   },
 });
 
+// First subscribe some topics
+MQTT.subscribe(deviceId.id + '/thermostat/targetHeatingCoolingState', function (message) {
+  targetHeatingCoolingState = message;
+  if (typeof message === 'undefined') { // no yet published, publishing it
+
+    }
+});
+MQTT.subscribe(topicTargetTemperature, function (message) {
+
+});
 
 Shelly.addEventHandler(function (message) {
   if (typeof message.info.event === "undefined") return;
   
-  //act as momentary as input:0 by followin the state if switch:0
-  if (message.info.component === "switch:0") { // check if it concerns our switch
-    if (typeof message.info.state !== "undefined") { // check if it concerns state event
-      Shelly.call("Switch.Set", {'id': 1,'on': message.info.state}); // follow the state
+  //report temperature
+  if (message.info.component === "temperature:0") { 
+    if (typeof message.info.temperature !== "undefined") {
+      MQTT.publish(deviceInfo.id + '/thermostat/currentTemperature', message.info.temperature.tC, 0, true)
     }
   }
-  //act as flip as input:1
-  if (meaage.info.component === "input:1") { // check if it concerns our input
-    if (typeof message.info.state !== "undefined") { // check if it concerns state event
-      Shelly.call("Switch.Set", {'id': 0,'on':message.info.state}); // follow the state id:1 will be set later
+  // report currentheatingCoolingState
+  if (message.info.component === "switch:0") { 
+    if (typeof message.info.state !== "undefined") {
+      MQTT.publish(deviceInfo.id + '/thermostat/currentState', message.info.state, 0, true)
     }
   }
 }
