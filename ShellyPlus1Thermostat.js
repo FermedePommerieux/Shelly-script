@@ -9,7 +9,6 @@
 //        TargetTemperature: config.name + "/targetTemperature",
 
 if (MQTT.isConnected()) die('No MQTT connection !!!'); // exit if no active MQTT connection
-
 // detach the input : we don't need it
 Shelly.call("Switch.SetConfig", {
   id: 0,
@@ -18,8 +17,8 @@ Shelly.call("Switch.SetConfig", {
   },
 });
 // define initial values
-let deviceInfo = Shelly.getDeviceInfo(), targetTemperature=21, targetHeatinCoolingState=true, currentTemperature=targetTemperature,
-    heatingThresholdTemperature=0.5, coolingThresholdTemperature=1,
+let deviceInfo = Shelly.getDeviceInfo(), targetTemperature=21, targetHeatingCoolingState=true,
+    currentTemperature=targetTemperature, heatingThresholdTemperature=0.5, coolingThresholdTemperature=1,
     topicTargetTemperature=deviceInfo.id + '/thermostat/targetTemperature',
     topicTargetHeatingCoolingState=deviceInfo.id + '/thermostat/targetHeatingCoolingState',
     topicCurrentHeatingCoolingState=deviceInfo.id + '/thermostat/currrentHeatingCoolingState',
@@ -27,16 +26,15 @@ let deviceInfo = Shelly.getDeviceInfo(), targetTemperature=21, targetHeatinCooli
     topicHeatingThresholdTemperature=deviceInfo.id + '/thermostat/heatingThresholdTemperature',
     topicCoolingThresholdTemperature=deviceInfo.id + '/thermostat/coolingThresholdTemperature';
 
-
+print(JSON.stringify(deviceInfo));
 
 // publish the initial target and current values
-MQTT.publish(topicTargetHeatingCoolingState, targetHeatingCoolingState, 0, true);
-MQTT.publish(topicTargetTemperature, targetTemperature, 0, true);
-MQTT.publish(topicHeatingThresholdTemperature, heatingThresholdTemperature, 0, true);
-MQTT.publish(topicCoolingThresholdTemperature, coolingThresholdTemperature, 0, true);
-MQTT.publish(topicCurrentTemperature, targetTemperature, 0, true);
-MQTT.publish(topicCurrentTemperature, currentTemperature, 0, true);
-
+MQTT.publish(topicTargetHeatingCoolingState, JSON.stringify(targetHeatingCoolingState), 0, true);
+MQTT.publish(topicTargetTemperature, JSON.stringify(targetTemperature), 0, true);
+MQTT.publish(topicHeatingThresholdTemperature, JSON.stringify(heatingThresholdTemperature), 0, true);
+MQTT.publish(topicCoolingThresholdTemperature, JSON.stringify(coolingThresholdTemperature), 0, true);
+MQTT.publish(topicCurrentTemperature, JSON.stringify(targetTemperature), 0, true);
+MQTT.publish(topicCurrentTemperature, JSON.stringify(currentTemperature), 0, true);
 
 // Subscribe and create simple target functions
 MQTT.subscribe(topicTargetHeatingCoolingState, function (message) {
