@@ -3,7 +3,7 @@ Some Shelly scripts to automate things
 
 As far i undestand (and how i use it):
 
-## Componments
+## Components
 
 Componment are switch, inputs, ans sensors (humidity, temperature, ...), the are labelled like this 'switch:id' or 'input:0' ...
 
@@ -11,13 +11,15 @@ Componment are switch, inputs, ans sensors (humidity, temperature, ...), the are
 
 ```javascript
 Shelly.addStatusHandler(function (message) { 
-  //act as momentary switch with input:0 by following the state of switch:0
+  //act as momentary as input:0 by followin the state if switch:0
+  
+  if (typeof message.component === "undefined") return;
   if (message.component === "switch:0") { // check if it concerns our switch
     if (typeof message.delta.output !== "undefined") { // check if it concerns state event
       Shelly.call("Switch.Set", {'id': 1,'on': message.delta.output}); // follow the state
     }
   }
-  //follow input:1
+  //act as flip as input:1
   if (message.component === "input:1") { // check if it concerns our input
     if (typeof message.delta.state !== "undefined") { // check if it concerns state event
       Shelly.call("Switch.Set", {'id': 0,'on':message.delta.state}); // follow the state id:1 will be set later
