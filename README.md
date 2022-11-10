@@ -33,7 +33,7 @@ Shelly.addStatusHandler(function (message) {
 To trigger an event we use the following function:
 ```javascript
 Shelly.addEventHandler( function (message) {your code})
-
+```
 The eventHandler will execute your code and provide a 'message' every time an event occurs. Note that, the shelly device will create one event message per event.
 
 The 'message' is an object that could contain an event, and **could** contains an event related to a componment. **It must be filtered**.
