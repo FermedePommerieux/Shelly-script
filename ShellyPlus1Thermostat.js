@@ -8,7 +8,7 @@
 //        CurrentTemperature: sensorCurrentTemperature,
 //        TargetTemperature: config.name + "/targetTemperature",
 
-if (MQTT.isConnected()) die('No MQTT connection !!!'); // exit if no active MQTT connection
+//if (MQTT.isConnected()) die('No MQTT connection !!!'); // exit if no active MQTT connection
 // detach the input : we don't need it
 Shelly.call("Switch.SetConfig", {
   id: 0,
@@ -18,17 +18,16 @@ Shelly.call("Switch.SetConfig", {
 });
 // define initial values
 let deviceInfo = Shelly.getDeviceInfo(), targetTemperature=21, targetHeatingCoolingState=true,
-    currentTemperature=targetTemperature, heatingThresholdTemperature=0.5, coolingThresholdTemperature=1,
-    topicThermostat=deviceInfo.id + '/thermostat'; mqttObj={
+    currentTemperature=targetTemperature, currentHeatingCoolingState=targetHeatingCoolingState,
+    heatingThresholdTemperature=0.5, coolingThresholdTemperature=1,
+    topicThermostat=deviceInfo.id + '/thermostat', mqttObj={
 	'targetTemperature': targetTemperature,
     	'targetHeatingCoolingState': targetHeatingCoolingState ? "HEAT" : "OFF",
-    	'currrentHeatingCoolingState': currrentHeatingCoolingState ? "HEAT" : "OFF",
+    	'currrentHeatingCoolingState': currentHeatingCoolingState ? "HEAT" : "OFF",
     	'currentTemperature': currentTemperature,
     	'heatingThresholdTemperature': heatingThresholdTemperature,
    	'coolingThresholdTemperature': coolingThresholdTemperature
     };
-
-print(JSON.stringify(deviceInfo));
 
 // publish the initial target and current values
 MQTT.publish(topicThermostat, JSON.stringify(mqttObj), 0, true);
@@ -47,18 +46,18 @@ Shelly.addEventHandler(function (message) {
   //report current temperature 
   if (message.info.component === "temperature:0") {
 	  if (typeof message.info.temperature !== "undefined") {
-		  currentTemperature=message.info.temperature.tC;
+		  currentTemperature = message.info.temperature.tC;
 	}
   }
   // report currentheatingCoolingState
   if (message.info.component === "switch:0") {
 	  if (typeof message.info.state !== "undefined") {
-		currentheatingCoolingState = message.info.state;
+		currentHeatingCoolingState = message.info.state;
 	}
   }
 
 	//publish
-MQTT.publish(topicThermostat, message.info.state, 0, true);
+MQTT.publish(topicThermostat, JSON.stringify(mqttObj), 0, true);
 	
 	// Now decide to Heat or not to Heat
   if (targetHeatingCoolingState) {
