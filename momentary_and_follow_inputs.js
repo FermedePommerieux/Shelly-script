@@ -23,7 +23,7 @@ Shelly.addEventHandler(function (event) {
       Shelly.call("Switch.Set", {'id': 1,'on':event.info.state}); // follow the state
     }
   }
-  //act as flip as input:1
+  //act as follow as input:1
   if (event.info.component === "input:1") { // check if it concerns our input
     if (typeof event.info.state !== "undefined") { // check if it concerns state event
       Shelly.call("Switch.Set", {'id': 0,'on':event.info.state}); // follow the state id:1 will be set later
