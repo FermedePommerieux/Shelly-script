@@ -9,49 +9,74 @@
 //        TargetTemperature: config.name + "/targetTemperature",
 
 if (MQTT.isConnected()) return; // exit if no active MQTT connection
-let deviceInfo = Shelly.getDeviceInfo(), targetTemperature=21, targetHeatinCoolingState=true,
-    topicTargetTemperature=deviceInfo.id + '/thermostat/targetTemperature',
-    topicTargetHeatingCoolingState=deviceInfo.id + '/thermostat/targetHeatingCoolingState',
-    topicCurrentHeatingCoolingState=deviceInfo.id + '/thermostat/currrentHeatingCoolingState',
-    topicCurrentTemperature=deviceInfo.id + '/thermostat/currentTemperature';
-// publishing the initial target values
-MQTT.publish(topicTargetHeatingCoolingState, targetHeatingCoolingState, 0, true)
-MQTT.publish(topicTargetTemperature, targetTemperature, 0, true)
 
 // detachs the input : we don't need it
 Shelly.call("Switch.SetConfig", {
-  id: 1,
+  id: 0,
   config: {
     in_mode: "detached",
   },
 });
+// define initial values
+let deviceInfo = Shelly.getDeviceInfo(), targetTemperature=21, targetHeatinCoolingState=true, currentTemperature=targetTemperature,
+    heatingThresholdTemperature=0.5, coolingThresholdTemperature=1,
+    topicTargetTemperature=deviceInfo.id + '/thermostat/targetTemperature',
+    topicTargetHeatingCoolingState=deviceInfo.id + '/thermostat/targetHeatingCoolingState',
+    topicCurrentHeatingCoolingState=deviceInfo.id + '/thermostat/currrentHeatingCoolingState',
+    topicCurrentTemperature=deviceInfo.id + '/thermostat/currentTemperature',
+    topicHeatingThresholdTemperature=deviceInfo.id + '/thermostat/heatingThresholdTemperature',
+    topicCoolingThresholdTemperature=deviceInfo.id + '/thermostat/coolingThresholdTemperature';
 
-// First subscribe some topics
-MQTT.subscribe(deviceId.id + '/thermostat/targetHeatingCoolingState', function (message) {
+
+
+// publish the initial target and current values
+MQTT.publish(topicTargetHeatingCoolingState, targetHeatingCoolingState, 0, true);
+MQTT.publish(topicTargetTemperature, targetTemperature, 0, true);
+MQTT.publish(topicHeatingThresholdTemperature, heatingThresholdTemperature, 0, true);
+MQTT.publish(topicCoolingThresholdTemperature, coolingThresholdTemperature, 0, true);
+MQTT.publish(topicCurrentTemperature, targetTemperature, 0, true);
+MQTT.publish(topicCurrentTemperature, currentTemperature, 0, true);
+
+// Subscribe and create simple target functions
+MQTT.subscribe(topictargetHeatingCoolingState', function (message) {
+  if (typeof message === 'undefined') return;
   targetHeatingCoolingState = message;
-  if (typeof message === 'undefined') { // no yet published, publishing it
-
-    }
 });
+
 MQTT.subscribe(topicTargetTemperature, function (message) {
-
+  if (typeof message === 'undefined') return;
+    targetTemperature = message ;
 });
+
+MQTT.subscribe(topicTargetTemperature, function (message) {
+  if (typeof message === 'undefined') return;
+    targetTemperature = message ;
+});
+
+MQTT.subscribe(topicTargetTemperature, function (message) {
+  if (typeof message === 'undefined') return;
+    targetTemperature = message ;
+});
+
+// Now create the events functions
 
 Shelly.addEventHandler(function (message) {
   if (typeof message.info.event === "undefined") return;
   
-  //report temperature
+  //report current temperature 
   if (message.info.component === "temperature:0") { 
     if (typeof message.info.temperature !== "undefined") {
-      MQTT.publish(deviceInfo.id + '/thermostat/currentTemperature', message.info.temperature.tC, 0, true)
+      MQTT.publish(TopicCurrentTemperature', message.info.temperature.tC, 0, true)
     }
   }
   // report currentheatingCoolingState
   if (message.info.component === "switch:0") { 
     if (typeof message.info.state !== "undefined") {
-      MQTT.publish(deviceInfo.id + '/thermostat/currentState', message.info.state, 0, true)
+      MQTT.publish(TopicCurrentState', message.info.state, 0, true)
     }
   }
+  // Now decide to Heat or not to Heat
+    
 }
 );
 
