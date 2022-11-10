@@ -7,7 +7,7 @@ As far i undestand (and how i use it):
 
 Componment are switch, inputs, ans sensors (humidity, temperature, ...), the are labelled like this 'switch:id' or 'input:0' ...
 
-## Status
+## Status handler
 
 ```javascript
 Shelly.addStatusHandler(function (message) { 
@@ -28,7 +28,7 @@ Shelly.addStatusHandler(function (message) {
 ```
 
 
-## Events
+## Events handler
 
 To trigger an event we use the following function:
 ```javascript
