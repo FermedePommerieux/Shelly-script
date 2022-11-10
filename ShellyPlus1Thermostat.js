@@ -1,4 +1,4 @@
-**/ This script makes ShellyPlus1 act as a MQTT thermostat
+**/ This script makes ShellyPlus1 act as an MQTT thermostat
 // it will read and publish the following MQTT topics
 // /thermostat/temperature/target
 // /thermostat/
@@ -37,32 +37,30 @@ MQTT.publish(topicCoolingThresholdTemperature, coolingThresholdTemperature, 0, t
 MQTT.publish(topicCurrentTemperature, targetTemperature, 0, true);
 MQTT.publish(topicCurrentTemperature, currentTemperature, 0, true);
 
+
 // Subscribe and create simple target functions
 MQTT.subscribe(topictargetHeatingCoolingState', function (message) {
   if (typeof message === 'undefined') return;
   targetHeatingCoolingState = message;
 });
-
 MQTT.subscribe(topicTargetTemperature, function (message) {
   if (typeof message === 'undefined') return;
     targetTemperature = message ;
 });
-
-MQTT.subscribe(topicTargetTemperature, function (message) {
+MQTT.subscribe(topicHeatingThresholdTemperature, function (message) {
   if (typeof message === 'undefined') return;
-    targetTemperature = message ;
+    HeatingThresholdTemperature = message ;
+});
+MQTT.subscribe(topicCoolingThresholdTemperature, function (message) {
+  if (typeof message === 'undefined') return;
+    coolThresholdTemperature = message ;
 });
 
-MQTT.subscribe(topicTargetTemperature, function (message) {
-  if (typeof message === 'undefined') return;
-    targetTemperature = message ;
-});
 
 // Now create the events functions
 
 Shelly.addEventHandler(function (message) {
-  if (typeof message.info.event === "undefined") return;
-  
+  if (typeof message.info.event === "undefined") return; 
   //report current temperature 
   if (message.info.component === "temperature:0") { 
     if (typeof message.info.temperature !== "undefined") {
@@ -76,7 +74,16 @@ Shelly.addEventHandler(function (message) {
     }
   }
   // Now decide to Heat or not to Heat
-    
+  if (targetHeatingCoolingState) {
+    if (currentTemperature < targetTemperature - coolingThresholdTemperature) {
+        		Shelly.call("Switch.Set", {'id': ,'on': true}) // start heater
+        	}
+        	else if (currentTemperature > targetTemperature +
+        			heatingThresholdTemperature) {
+        		Shelly.call("Switch.Set", {'id': 0,'on': false}) // stop heater
+        	}
+		}
+  }
 }
 );
 
