@@ -10,7 +10,7 @@
 
 if (MQTT.isConnected()) return; // exit if no active MQTT connection
 
-// detachs the input : we don't need it
+// detach the input : we don't need it
 Shelly.call("Switch.SetConfig", {
   id: 0,
   config: {
@@ -44,16 +44,16 @@ MQTT.subscribe(topictargetHeatingCoolingState', function (message) {
   targetHeatingCoolingState = message;
 });
 MQTT.subscribe(topicTargetTemperature, function (message) {
-  if (typeof message === 'undefined') return;
-    targetTemperature = message ;
+	if (typeof message === 'undefined') return;
+	targetTemperature = message ;
 });
 MQTT.subscribe(topicHeatingThresholdTemperature, function (message) {
-  if (typeof message === 'undefined') return;
-    HeatingThresholdTemperature = message ;
+	if (typeof message === 'undefined') return;
+	HeatingThresholdTemperature = message ;
 });
 MQTT.subscribe(topicCoolingThresholdTemperature, function (message) {
   if (typeof message === 'undefined') return;
-    coolThresholdTemperature = message ;
+	coolThresholdTemperature = message ;
 });
 
 
@@ -62,28 +62,27 @@ MQTT.subscribe(topicCoolingThresholdTemperature, function (message) {
 Shelly.addEventHandler(function (message) {
   if (typeof message.info.event === "undefined") return; 
   //report current temperature 
-  if (message.info.component === "temperature:0") { 
-    if (typeof message.info.temperature !== "undefined") {
-      MQTT.publish(TopicCurrentTemperature', message.info.temperature.tC, 0, true)
-    }
-  }
-  // report currentheatingCoolingState
-  if (message.info.component === "switch:0") { 
-    if (typeof message.info.state !== "undefined") {
-      MQTT.publish(TopicCurrentState', message.info.state, 0, true)
-    }
-  }
-  // Now decide to Heat or not to Heat
-  if (targetHeatingCoolingState) {
-    if (currentTemperature < targetTemperature - coolingThresholdTemperature) {
-        		Shelly.call("Switch.Set", {'id': ,'on': true}) // start heater
-        	}
-        	else if (currentTemperature > targetTemperature +
-        			heatingThresholdTemperature) {
-        		Shelly.call("Switch.Set", {'id': 0,'on': false}) // stop heater
-        	}
+  if (message.info.component === "temperature:0") {
+	  if (typeof message.info.temperature !== "undefined") {
+		  MQTT.publish(TopicCurrentTemperature', message.info.temperature.tC, 0, true);
 		}
   }
+  // report currentheatingCoolingState
+  if (message.info.component === "switch:0") {
+	  if (typeof message.info.state !== "undefined") {
+		  MQTT.publish(TopicCurrentState', message.info.state, 0, true);
+		}
+  }
+	// Now decide to Heat or not to Heat
+	if (targetHeatingCoolingState) {
+		if (currentTemperature < targetTemperature - coolingThresholdTemperature) {
+			Shelly.call("Switch.Set", {'id': 0,'on': true}) // start heater
+		}
+		else if (currentTemperature > targetTemperature + heatingThresholdTemperature) {
+			Shelly.call("Switch.Set", {'id': 0,'on': false}) // stop heater
+		}
+	}
+}
 }
 );
 
