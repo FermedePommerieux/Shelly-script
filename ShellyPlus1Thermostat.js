@@ -20,7 +20,8 @@ Shelly.call("Switch.SetConfig", {
 let deviceInfo = Shelly.getDeviceInfo(), targetTemperature=21, targetHeatingCoolingState=true,
     currentTemperature=targetTemperature, currentHeatingCoolingState=targetHeatingCoolingState,
     heatingThresholdTemperature=0.5, coolingThresholdTemperature=1,
-    topicThermostat=deviceInfo.id + '/thermostat', mqttTargetObj={
+    topicThermostat=deviceInfo.id + '/thermostat',
+    mqttTargetObj={
 	'targetTemperature': targetTemperature,
     	'targetHeatingCoolingState': targetHeatingCoolingState ? "HEAT" : "OFF",
     	'heatingThresholdTemperature': heatingThresholdTemperature,
@@ -35,14 +36,14 @@ let deviceInfo = Shelly.getDeviceInfo(), targetTemperature=21, targetHeatingCool
 MQTT.publish(topicThermostat, JSON.stringify(mqttTargetObj), 0, true);
 MQTT.publish(topicThermostat, JSON.stringify(mqttCurrentObj), 0, true);
 
-// Subscribe and create simple target functions
+// Subscribe to target data
 MQTT.subscribe(topicThermostat, function (message) {
   if (typeof message === 'undefined') return;
 	mqttTargetObj = JSON.parse(message);
 });
 
 
-// Now create the events functions
+// Now create the status functions
 
 Shelly.addStatusHandler(function (message) {
   if (typeof message.component === "undefined") return; 
