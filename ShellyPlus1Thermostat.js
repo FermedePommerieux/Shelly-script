@@ -41,18 +41,18 @@ MQTT.subscribe(topicThermostat, function (message) {
 
 // Now create the events functions
 
-Shelly.addEventHandler(function (message) {
-  if (typeof message.info.event === "undefined") return; 
+Shelly.addStatusHandler(function (message) {
+  if (typeof message.component === "undefined") return; 
   //report current temperature 
   if (message.info.component === "temperature:0") {
-	  if (typeof message.info.temperature !== "undefined") {
-		  currentTemperature = message.info.temperature.tC;
+	  if (typeof message.tC !== "undefined") {
+		  currentTemperature = message.tC;
 	}
   }
   // report currentheatingCoolingState
   if (message.info.component === "switch:0") {
-	  if (typeof message.info.state !== "undefined") {
-		currentHeatingCoolingState = message.info.state;
+	  if (typeof message.state !== "undefined") {
+		currentHeatingCoolingState = message.state;
 	}
   }
 
