@@ -18,8 +18,8 @@ Shelly.addStatusHandler(function (message) {
   
   if (typeof message.component === "undefined") return;
   if (message.component === "switch:0") { // check if it concerns our switch
-    if (typeof message.delta.output !== "undefined") { // check if it concerns state event
-      Shelly.call("Switch.Set", {'id': 1,'on': message.delta.output}); // follow the state
+    if (typeof message.delta.output !== "undefined") { // check if it concerns output event
+      Shelly.call("Switch.Set", {'id': 1,'on': message.delta.output}); // follow the output
     }
   }
   //act as flip by following the state of input:1
