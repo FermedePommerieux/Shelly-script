@@ -5,7 +5,7 @@ As far i undestand (and how i use it):
 
 ## Components
 
-Componment are switch, inputs, ans sensors (humidity, temperature, ...), the are labelled like this 'switch:id' or 'input:0' ...
+Componment are switch, inputs, and sensors (humidity, temperature, ...), the are labelled like this 'switch:id' or 'input:0' ...
 
 ## Status handler
 
