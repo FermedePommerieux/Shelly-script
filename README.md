@@ -41,7 +41,7 @@ The eventHandler will execute your code and provide a 'message' every time an ev
 The 'message' is an object that could contain an event, and **could** contains an event related to a componment. **It must be filtered**.
 ```javascript
 if (typeof message.info.event !== "undefined") {print('this message is an event')};
-if (typeof message.info.componment !== "undefined") {print('this message concerns a componment')};
+if (typeof message.info.component !== "undefined") {print('this message concerns a componment')};
 ```
 The componment event 'message' could then contains the needed attributes:
 
