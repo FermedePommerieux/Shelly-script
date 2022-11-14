@@ -1,14 +1,15 @@
 // This script makes ShellyPlus1 act as an MQTT heat-only thermostat
 // it will read and publish the following MQTT topics
-// /thermostat/temperature/target
-// /thermostat/
+
 
 //        CurrentHeatingCoolingState: switchHeatStatus,
 //        TargetHeatingCoolingState: config.name + "/targetState",
 //        CurrentTemperature: sensorCurrentTemperature,
 //        TargetTemperature: config.name + "/targetTemperature",
 
-//if (MQTT.isConnected()) die('No MQTT connection !!!'); // exit if no active MQTT connection
+// for now this script simply crash the device !
+
+if (MQTT.isConnected()) die('No MQTT connection !!!'); // exit if no active MQTT connection
 // detach the input : we don't need it
 Shelly.call("Switch.SetConfig", {
   id: 0,
