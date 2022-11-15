@@ -18,10 +18,10 @@ Shelly.call("Switch.SetConfig", {
   },
 });
 // define initial values
-let deviceInfo = Shelly.getDeviceInfo(), targetTemperature=21, targetHeatingCoolingState=true,
+let targetTemperature=21, targetHeatingCoolingState=true,
     currentTemperature=targetTemperature, currentHeatingCoolingState=targetHeatingCoolingState,
     heatingThresholdTemperature=0.5, coolingThresholdTemperature=1,
-    topicThermostat=deviceInfo.id + '/thermostat',
+    topicThermostat=Shelly.getDeviceInfo().id + '/thermostat',
     mqttTargetObj={
 	'targetTemperature': targetTemperature,
     	'targetHeatingCoolingState': targetHeatingCoolingState ? "HEAT" : "OFF",
@@ -39,7 +39,7 @@ MQTT.publish(topicThermostat, JSON.stringify(mqttCurrentObj), 0, true);
 
 // Subscribe to target data
 MQTT.subscribe(topicThermostat, function (message) {
-  if (typeof message === 'undefined') return;
+  if (typeof message === "undefined") return;
 	mqttTargetObj = JSON.parse(message);
 });
 
@@ -65,7 +65,7 @@ Shelly.addStatusHandler(function (message) {
 MQTT.publish(topicThermostat, JSON.stringify(mqttCurrentObj), 0, true);
 	
 	// Now decide to Heat or not to Heat
-  if (targetHeatingCoolingState) {
+  if (targetHeatingCoolingState === "HEAT") {
 	if (currentTemperature < targetTemperature - coolingThresholdTemperature) {
 		Shelly.call("Switch.Set", {'id': 0,'on': true}); // start heater
 	}
