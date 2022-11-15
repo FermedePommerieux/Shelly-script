@@ -18,13 +18,13 @@ Shelly.call("Switch.SetConfig", {
   },
 });
 // define initial values
-let targetTemperature=21, targetHeatingCoolingState=true,
+let publishMsg=false, targetTemperature=21, targetHeatingCoolingState="HEAT",
     currentTemperature=targetTemperature, currentHeatingCoolingState=targetHeatingCoolingState,
     heatingThresholdTemperature=0.5, coolingThresholdTemperature=1,
     topicThermostat=Shelly.getDeviceInfo().id + '/thermostat',
     mqttTargetObj={
 	'targetTemperature': targetTemperature,
-    	'targetHeatingCoolingState': targetHeatingCoolingState ? "HEAT" : "OFF",
+    	'targetHeatingCoolingState': targetHeatingCoolingState,
     	'heatingThresholdTemperature': heatingThresholdTemperature,
    	'coolingThresholdTemperature': coolingThresholdTemperature
     },
@@ -47,22 +47,25 @@ MQTT.subscribe(topicThermostat, function (message) {
 // Now create the status functions
 
 Shelly.addStatusHandler(function (message) {
+  publish=false;
   if (typeof message.component === "undefined") return; 
   //report current temperature 
   if (message.info.component === "temperature:0") {
-	  if (typeof message.tC !== "undefined") {
+	  if (typeof message.delta.tC !== "undefined") {
 		  currentTemperature = message.tC;
+		  publishMsg=true;
 	}
   }
   // report currentheatingCoolingState
   if (message.info.component === "switch:0") {
-	  if (typeof message.state !== "undefined") {
+	  if (typeof message.delta.state !== "undefined") {
 		currentHeatingCoolingState = message.state;
+		  publishMsg=true;
 	}
   }
 
-	//publish
-MQTT.publish(topicThermostat, JSON.stringify(mqttCurrentObj), 0, true);
+	//publish if needed
+if (publishMsg) MQTT.publish(topicThermostat, JSON.stringify(mqttCurrentObj), 0, true);
 	
 	// Now decide to Heat or not to Heat
   if (targetHeatingCoolingState === "HEAT") {
