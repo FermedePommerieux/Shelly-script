@@ -9,6 +9,7 @@
 
 
 print("Starting Shelly Thermostat Script");
+
 if (!MQTT.isConnected()) die('No MQTT connection !'); // exit if no active MQTT connection
 // detach the input : we don't need it
 Shelly.call("Switch.SetConfig", {
@@ -21,7 +22,7 @@ Shelly.call("Switch.SetConfig", {
 
 // define initial values
 let publishMsg=false, d=null, lastStart=null, lastStop=null, useExternalSensor=true,
-    minHeatingTime=10*60*1000, holdTimer=false, maxTargetTemperature=24,
+    minHeatingTime=10*60*1000, holdTimer=false, timer_handle=null, maxTargetTemperature=24,
     topicExternalSensor = 'shellyplusht-c049ef8e1ddc/events/rpc',
     targetTemperature=20, targetHeatingCoolingState="HEAT",
     currentTemperature=targetTemperature,
@@ -34,7 +35,7 @@ let publishMsg=false, d=null, lastStart=null, lastStop=null, useExternalSensor=t
 
 
 function saveData() {
-print("Saving taget Data to KVS", KVS_KEY);
+print("Saving target Data to KVS", KVS_KEY);
 	KVSTObj = {
 	'targetTemperature': targetTemperature,
     'targetHeatingCoolingState': targetHeatingCoolingState,
@@ -87,7 +88,10 @@ MQTT.publish(topicThermostat + '/currentTemperature',
  JSON.stringify(currentTemperature) , 0, false);
 }
 
-function holdStopHeater() { holdTimer = false;};
+function holdStopHeater() {
+print("Timer resumed");
+holdTimer = false; heatControl();
+};
 
 function heatControl () {
   if (targetHeatingCoolingState === "HEAT") {
@@ -96,26 +100,29 @@ function heatControl () {
       currentHeatingCoolingState = "HEAT";
       Shelly.call("Switch.Set", {'id': 0,'on': true}); // start heater
       //Start timer for minHeatTime
-      holdTimer=true; // prevent to stop before a specified time
-      Timer.set(minHeatingTime,true,holdStopHeater);
+      if (holdTimer === false) { // to not start multiples Timers
+      	holdTimer=true; // prevent to stop before a specified time
+      print("Starting timer for", minHeatingTime, "ms" );
+      	timer_handle = Timer.set(minHeatingTime,true,holdStopHeater);
+      }
     }
     else if (currentTemperature > targetTemperature + heatingThresholdTemperature) {
       print("CurrentTemperature is higher than", targetTemperature + heatingThresholdTemperature,", stoping heater");
-      if ((holdTimer)&&( currentTemperature < maxTargetTemperature)) {
+      if (( holdTimer )&&( currentTemperature < maxTargetTemperature)) {
       	print("minHeatTime not reached, waiting until timer resumes");
-      }
+      	}
       else {
-      	currentHeatingCoolingState = "OFF";
+      	currentHeatingCoolingState = "OFF"; Timer.clear(timer_handle);
       	Shelly.call("Switch.Set", {'id': 0,'on': false}); // stop heater}
-    }
+    	}
     }
   }
   else {
     print("TargetHeatingCoolingState is set to OFF, stopping heater");
-    currentHeatingCoolingState = "OFF";
+    currentHeatingCoolingState = "OFF"; Timer.clear(timer_handle);
     Shelly.call("Switch.Set", {'id': 0,'on': false}); // stop heater
   }
-  publishCurrent()
+  publishCurrent();
   };
 
 // publish the initial target and current values
