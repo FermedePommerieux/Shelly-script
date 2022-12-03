@@ -50,8 +50,8 @@ function getData() {
       print("Read from KVS", JSON.stringify(error_code));
       //targetTemperature exist
       if (error_code === 0) {
-      print("Stored targetTemperature :", JSON.stringify(result));
-        targetTemperature = result;
+      print("Restored targetTemperature :", JSON.stringify(result.value));
+        targetTemperature = result.value;
         return;
       }
     }
@@ -59,29 +59,6 @@ function getData() {
 }
 
 getData();
-
-
-
-function heatControl () {
-  if (targetHeatingCoolingState === "HEAT") {
-	if (currentTemperature < targetTemperature - coolingThresholdTemperature) {
-  print("CurrentTemperature is low, starting heater");
-  currentHeatingCoolingState = true;
-		Shelly.call("Switch.Set", {'id': 0,'on': true}); // start heater
-	}
-	else if (currentTemperature > targetTemperature + heatingThresholdTemperature) {
-    print("CurrentTemperature is high, stoping heater");
-    currentHeatingCoolingState = false;
-		Shelly.call("Switch.Set", {'id': 0,'on': false}); // stop heater
-	}
-  }
-  else {
-    print("TargetHeatingCoolingState is set to OFF, stopping heater");
-    currentHeatingCoolinState = false;
-  	Shelly.call("Switch.Set", {'id': 0,'on': false}); // stop heater
-	}
-  };
-
 
 function publishTarget() {
 MQTT.publish(topicThermostat + '/targetTemperature',
@@ -96,17 +73,39 @@ MQTT.publish(topicThermostat + '/coolingThresholdTemperature',
 
 function publishCurrent() {
 MQTT.publish(topicThermostat + '/currentHeatingCoolingState',
- currentHeatingCoolingState, 0, false);
+ JSON.stringify(currentHeatingCoolingState), 0, false);
 MQTT.publish(topicThermostat + '/currentTemperature',
  JSON.stringify(currentTemperature) , 0, false);
 }
+
+
+function heatControl () {
+  if (targetHeatingCoolingState === "HEAT") {
+    if (currentTemperature < targetTemperature - coolingThresholdTemperature) {
+      print("CurrentTemperature is low, starting heater");
+      currentHeatingCoolingState = "HEAT";
+      Shelly.call("Switch.Set", {'id': 0,'on': true}); // start heater
+    }
+    else if (currentTemperature > targetTemperature + heatingThresholdTemperature) {
+      print("CurrentTemperature is high, stoping heater");
+      currentHeatingCoolingState = "OFF";
+      Shelly.call("Switch.Set", {'id': 0,'on': false}); // stop heater
+    }
+  }
+  else {
+    print("TargetHeatingCoolingState is set to OFF, stopping heater");
+    currentHeatingCoolingState = "OFF";
+    Shelly.call("Switch.Set", {'id': 0,'on': false}); // stop heater
+  }
+  publishCurrent()
+  };
 
 // publish the initial target and current values
 publishTarget();
 publishCurrent();
 
 //lauch timer for publishing
-Timer.set(5000,true,publishTarget);
+Timer.set(50000,true,publishTarget);
 
 
 // Subscribe to target datas:
@@ -123,7 +122,7 @@ MQTT.subscribe(topicThermostat + '/targetHeatingCoolingState',
  function (topic, message) {
   if (typeof message === "undefined") return;
   if (targetHeatingCoolingState === message ) return;
-  targetHeatingCoolingState = message;
+  targetHeatingCoolingState = JSON.parse(message);
   heatControl();
 });
 MQTT.subscribe(topicThermostat + '/heatingThresholdTemperature',
@@ -153,7 +152,6 @@ print("External Temperature Sensor enable")
     currentTemperature = message.params["temperature:0"].tC;
     print("external temperature sensor has reported a currenTemperature :",
      currentTemperature);
-  publishCurrent()
   heatControl();
   });
 }
