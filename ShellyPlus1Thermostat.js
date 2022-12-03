@@ -7,7 +7,7 @@
 //        CurrentTemperature: sensorCurrentTemperature,
 //        TargetTemperature: config.name + "/targetTemperature",
 
-// for now this script simply crash the device !
+
 print("Starting Shelly Thermostat Script");
 if (!MQTT.isConnected()) die('No MQTT connection !'); // exit if no active MQTT connection
 // detach the input : we don't need it
@@ -34,6 +34,7 @@ let publishMsg=false, d=null, lastStart=null, lastStop=null, useExternalSensor=t
 
 
 function saveData() {
+print("Saving taget Data to KVS", KVS_KEY);
 	KVSTObj = {
 	'targetTemperature': targetTemperature,
     'targetHeatingCoolingState': targetHeatingCoolingState,
@@ -141,6 +142,7 @@ MQTT.subscribe(topicThermostat + '/targetHeatingCoolingState',
   if (typeof message === "undefined") return;
   if (targetHeatingCoolingState === message ) return;
   targetHeatingCoolingState = JSON.parse(message);
+  saveData();
   heatControl();
 });
 MQTT.subscribe(topicThermostat + '/heatingThresholdTemperature',
@@ -149,6 +151,7 @@ MQTT.subscribe(topicThermostat + '/heatingThresholdTemperature',
   message = JSON.parse(message);
   if (heatingThresholdTemperature === message ) return;
   heatingThresholdTemperature = message;
+  saveData();
   heatControl();
 });
 MQTT.subscribe(topicThermostat + '/coolingThresholdTemperature',
@@ -157,6 +160,7 @@ MQTT.subscribe(topicThermostat + '/coolingThresholdTemperature',
   message = JSON.parse(message);
   if (coolingThresholdTemperature === message ) return;
   coolingThresholdTemperature = message;
+  saveData();
   heatControl();
 });
 
@@ -170,7 +174,7 @@ print("External Temperature Sensor enable")
     currentTemperature = message.params["temperature:0"].tC;
     print("external temperature sensor has reported a currenTemperature :",
      currentTemperature);
-  heatControl();
+    heatControl();
   });
 }
 
@@ -184,7 +188,6 @@ if (!useExternalSensor) {
   if ((message.component === "temperature:0")&&(useExternalSensor === false)) {
 	  if (typeof message.delta.tC !== "undefined") {
 		  currentTemperature = message.delta.tC;
-		  publishMsg=true;
 	}
   }
 }
@@ -192,7 +195,6 @@ if (!useExternalSensor) {
   if (message.component === "switch:0") {
 	  if (typeof message.delta.state !== "undefined") {
 		currentHeatingCoolingState = message.delta.state ? "HEAT" : "OFF";
-		  publishMsg=true;
 	}
   }
 
