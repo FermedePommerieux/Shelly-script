@@ -18,32 +18,66 @@ Shelly.call("Switch.SetConfig", {
   },
 });
 
-// Define some functions
-
-
 
 // define initial values
 let publishMsg=false, d=null, lastStart=null, lastStop=null, useExternalSensor=true,
-	topicExternalSensor = 'shellyplusht-c049ef8e1ddc/events/rpc',
-	targetTemperature=20, targetHeatingCoolingState="HEAT",
+    KVS_KEY = "targetTemperature",
+    topicExternalSensor = 'shellyplusht-c049ef8e1ddc/events/rpc',
+    targetTemperature=20, targetHeatingCoolingState="HEAT",
     currentTemperature=targetTemperature,
     currentHeatingCoolingState=targetHeatingCoolingState,
     heatingThresholdTemperature=0.5, coolingThresholdTemperature=1,
     topicThermostat=Shelly.getDeviceInfo().id + '/thermostat';
 
+// Define some functions
+
+
+function saveData() {
+  Shelly.call("KVS.Set", {
+    key: KVS_KEY,
+    value: targetTemperature,
+  });
+}
+
+function getData() {
+  print("Reading from ", KVS_KEY);
+  Shelly.call(
+    "KVS.Get",
+    {
+      key: KVS_KEY,
+    },
+    function (result, error_code, error_message) {
+      print("Read from KVS", JSON.stringify(error_code));
+      //targetTemperature exist
+      if (error_code === 0) {
+      print("Stored targetTemperature :", JSON.stringify(result));
+        targetTemperature = result;
+        return;
+      }
+    }
+  );
+}
+
+getData();
+
+
+
 function heatControl () {
   if (targetHeatingCoolingState === "HEAT") {
 	if (currentTemperature < targetTemperature - coolingThresholdTemperature) {
   print("CurrentTemperature is low, starting heater");
+  currentHeatingCoolingState = true;
 		Shelly.call("Switch.Set", {'id': 0,'on': true}); // start heater
 	}
 	else if (currentTemperature > targetTemperature + heatingThresholdTemperature) {
     print("CurrentTemperature is high, stoping heater");
+    currentHeatingCoolingState = false;
 		Shelly.call("Switch.Set", {'id': 0,'on': false}); // stop heater
 	}
   }
   else {
     print("TargetHeatingCoolingState is set to OFF, stopping heater");
+    currentHeatingCoolinState = false;
   	Shelly.call("Switch.Set", {'id': 0,'on': false}); // stop heater
 	}
   };
@@ -62,7 +96,7 @@ MQTT.publish(topicThermostat + '/coolingThresholdTemperature',
 
 function publishCurrent() {
 MQTT.publish(topicThermostat + '/currentHeatingCoolingState',
- currentHeatingCoolingState ? "HEAT" : "OFF", 0, false);
+ currentHeatingCoolingState, 0, false);
 MQTT.publish(topicThermostat + '/currentTemperature',
  JSON.stringify(currentTemperature) , 0, false);
 }
@@ -71,31 +105,42 @@ MQTT.publish(topicThermostat + '/currentTemperature',
 publishTarget();
 publishCurrent();
 
+//lauch timer for publishing
+Timer.set(5000,true,publishTarget);
+
+
 // Subscribe to target datas:
 MQTT.subscribe(topicThermostat + '/targetTemperature',
  function (topic, message) {
   if (typeof message === "undefined") return;
-  print("TargetTemperature has changed");
-	targetTemperature = JSON.parse(message);
-heatControl();
+  message = JSON.parse(message);
+  if (targetTemperature === message ) return; 
+  targetTemperature = message;
+  saveData();
+  heatControl();
 });
 MQTT.subscribe(topicThermostat + '/targetHeatingCoolingState',
  function (topic, message) {
   if (typeof message === "undefined") return;
-	targetHeatingCoolingState = message;
-heatControl();
+  if (targetHeatingCoolingState === message ) return;
+  targetHeatingCoolingState = message;
+  heatControl();
 });
 MQTT.subscribe(topicThermostat + '/heatingThresholdTemperature',
  function (topic, message) {
   if (typeof message === "undefined") return;
-	heatingThresholdTemperature = JSON.parse(message);
-heatControl();
+  message = JSON.parse(message);
+  if (heatingThresholdTemperature === message ) return;
+  heatingThresholdTemperature = message;
+  heatControl();
 });
 MQTT.subscribe(topicThermostat + '/coolingThresholdTemperature',
  function (topic, message) {
   if (typeof message === "undefined") return;
-	coolingThresholdTemperature = JSON.parse(message);
-heatControl();
+  message = JSON.parse(message);
+  if (coolingThresholdTemperature === message ) return;
+  coolingThresholdTemperature = message;
+  heatControl();
 });
 
   //Subscribe to an external Sensor if needed
@@ -130,7 +175,7 @@ if (!useExternalSensor) {
   // report currentheatingCoolingState
   if (message.component === "switch:0") {
 	  if (typeof message.delta.state !== "undefined") {
-		currentHeatingCoolingState = message.delta.state;
+		currentHeatingCoolingState = message.delta.state ? "HEAT" : "OFF";
 		  publishMsg=true;
 	}
   }
