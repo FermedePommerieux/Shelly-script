@@ -22,6 +22,7 @@ Shelly.call("Switch.SetConfig", {
 // define initial values
 let publishMsg=false, d=null, lastStart=null, lastStop=null, useExternalSensor=true,
     KVS_KEY = "targetTemperature",
+    minHeatTime=10*60*1000, holdTimer=false, maxTargetTemperature=24,
     topicExternalSensor = 'shellyplusht-c049ef8e1ddc/events/rpc',
     targetTemperature=20, targetHeatingCoolingState="HEAT",
     currentTemperature=targetTemperature,
@@ -58,8 +59,6 @@ function getData() {
   );
 }
 
-getData();
-
 function publishTarget() {
 MQTT.publish(topicThermostat + '/targetTemperature',
  JSON.stringify(targetTemperature), 0, false);
@@ -78,18 +77,27 @@ MQTT.publish(topicThermostat + '/currentTemperature',
  JSON.stringify(currentTemperature) , 0, false);
 }
 
+function holdStopHeater() { holdTimer = false; };
 
 function heatControl () {
   if (targetHeatingCoolingState === "HEAT") {
     if (currentTemperature < targetTemperature - coolingThresholdTemperature) {
-      print("CurrentTemperature is low, starting heater");
+      print("CurrentTemperature is lower than ",targetTemperature - coolingThresholdTemperature, ", starting heater");
       currentHeatingCoolingState = "HEAT";
       Shelly.call("Switch.Set", {'id': 0,'on': true}); // start heater
+      //Start timer for minHeatTime
+      holdTimer=true; // prevent to stop before a specified time
+      Timer.set(minHeatTime,true,holdStopHeater);
     }
     else if (currentTemperature > targetTemperature + heatingThresholdTemperature) {
-      print("CurrentTemperature is high, stoping heater");
-      currentHeatingCoolingState = "OFF";
-      Shelly.call("Switch.Set", {'id': 0,'on': false}); // stop heater
+      print("CurrentTemperature is higher than", targetTemperature + heatingThresholdTemperature,", stoping heater");
+      if ((holdTimer)&&( currentTemperature < maxTargetTemperature)) {
+      	print("minHeatTime not reached, waiting until timer resumes");
+      }
+      else {
+      	currentHeatingCoolingState = "OFF";
+      	Shelly.call("Switch.Set", {'id': 0,'on': false}); // stop heater}
+    }
     }
   }
   else {
@@ -177,8 +185,7 @@ if (!useExternalSensor) {
 		  publishMsg=true;
 	}
   }
-//publish if needed
-if (publishMsg) publishCurrent();
+
 // Now decide to Heat or not to Heat
 heatControl();
 });
