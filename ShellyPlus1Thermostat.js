@@ -56,7 +56,7 @@ function getData() {
       //targetTemperature exist
       if (error_code === 0) {
       	print("Restored target settings :", JSON.stringify(result.value));
-      	result = JSON.parse(result.value);
+      	result = result.value;
       	targetTemperature = result.targetTemperature;
       	targetHeatingCoolingState = result.targetHeatingCoolingState;
       	heatingThresholdTemperature = result.heatingThresholdTemperature;
