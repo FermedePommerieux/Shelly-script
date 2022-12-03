@@ -2,11 +2,24 @@
 // it will read and publish the following MQTT topics
 
 
-//        CurrentHeatingCoolingState: switchHeatStatus,
-//        TargetHeatingCoolingState: config.name + "/targetState",
-//        CurrentTemperature: sensorCurrentTemperature,
-//        TargetTemperature: config.name + "/targetTemperature",
+/*
+MQTT.publish(topicThermostat + '/targetTemperature',
+ JSON.stringify(targetTemperature), 0, false);
+MQTT.publish(topicThermostat + '/targetHeatingCoolingState',
+ targetHeatingCoolingState, 0, false);
+MQTT.publish(topicThermostat + '/heatingThresholdTemperature',
+ JSON.stringify(heatingThresholdTemperature), 0, false);
+MQTT.publish(topicThermostat + '/coolingThresholdTemperature',
+ JSON.stringify(coolingThresholdTemperature), 0, false);
+}
 
+function publishCurrent() {
+MQTT.publish(topicThermostat + '/currentHeatingCoolingState',
+ JSON.stringify(currentHeatingCoolingState), 0, false);
+MQTT.publish(topicThermostat + '/currentTemperature',
+ JSON.stringify(currentTemperature) , 0, false);
+}
+*/
 
 print("Starting Shelly Thermostat Script");
 
@@ -175,11 +188,11 @@ MQTT.subscribe(topicThermostat + '/coolingThresholdTemperature',
 if (useExternalSensor) {
 print("External Temperature Sensor enable")
   MQTT.subscribe(topicExternalSensor, function (topic, message) {    
-    message = JSON.parse(message);
     if (typeof message.params === "undefined" ) return;
     if ( typeof message.params["temperature:0"] === "undefined" ) return;
+    message = JSON.parse(message);
     currentTemperature = message.params["temperature:0"].tC;
-    print("external temperature sensor has reported a currenTemperature :",
+    print("external temperature sensor has reported a currentTemperature :",
      currentTemperature);
     heatControl();
   });
