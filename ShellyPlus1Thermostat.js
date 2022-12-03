@@ -109,6 +109,7 @@ function heatControl () {
   };
 
 // publish the initial target and current values
+getData(); // restore previous datas
 publishTarget();
 publishCurrent();
 
