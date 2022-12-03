@@ -21,23 +21,27 @@ Shelly.call("Switch.SetConfig", {
 
 // define initial values
 let publishMsg=false, d=null, lastStart=null, lastStop=null, useExternalSensor=true,
-    KVS_KEY = "targetTemperature",
-    minHeatTime=10*60*1000, holdTimer=false, maxTargetTemperature=24,
+    minHeatingTime=10*60*1000, holdTimer=false, maxTargetTemperature=24,
     topicExternalSensor = 'shellyplusht-c049ef8e1ddc/events/rpc',
     targetTemperature=20, targetHeatingCoolingState="HEAT",
     currentTemperature=targetTemperature,
     currentHeatingCoolingState=targetHeatingCoolingState,
     heatingThresholdTemperature=0.5, coolingThresholdTemperature=1,
-    topicThermostat=Shelly.getDeviceInfo().id + '/thermostat';
+    topicThermostat=Shelly.getDeviceInfo().id + '/thermostat',
+    KVS_KEY = "thermostat", KVSTObj = null;
 
 // Define some functions
 
 
 function saveData() {
-  Shelly.call("KVS.Set", {
-    key: KVS_KEY,
-    value: targetTemperature,
-  });
+	KVSTObj = {
+	'targetTemperature': targetTemperature,
+    'targetHeatingCoolingState': targetHeatingCoolingState,
+    'heatingThresholdTemperature': heatingThresholdTemperature,
+   	'coolingThresholdTemperature': coolingThresholdTemperature,
+   	'minHeatingTime': minHeatingTime,
+    },
+  	Shelly.call("KVS.Set", { key: KVS_KEY, value: KVSTObj });
 }
 
 function getData() {
@@ -51,9 +55,14 @@ function getData() {
       print("Read from KVS", JSON.stringify(error_code));
       //targetTemperature exist
       if (error_code === 0) {
-      print("Restored targetTemperature :", JSON.stringify(result.value));
-        targetTemperature = result.value;
-        return;
+      	print("Restored target settings :", JSON.stringify(result.value));
+      	result = JSON.parse(result.value);
+      	targetTemperature = result.targetTemperature;
+      	targetHeatingCoolingState = result.targetHeatingCoolingState;
+      	heatingThresholdTemperature = result.heatingThresholdTemperature;
+      	coolingThresholdTemperature = result.coolingThresholdTemperature;
+      	minHeatingTime = result.minHeatingTime;
+      	return;
       }
     }
   );
@@ -77,7 +86,7 @@ MQTT.publish(topicThermostat + '/currentTemperature',
  JSON.stringify(currentTemperature) , 0, false);
 }
 
-function holdStopHeater() { holdTimer = false; };
+function holdStopHeater() { holdTimer = false;};
 
 function heatControl () {
   if (targetHeatingCoolingState === "HEAT") {
@@ -87,7 +96,7 @@ function heatControl () {
       Shelly.call("Switch.Set", {'id': 0,'on': true}); // start heater
       //Start timer for minHeatTime
       holdTimer=true; // prevent to stop before a specified time
-      Timer.set(minHeatTime,true,holdStopHeater);
+      Timer.set(minHeatingTime,true,holdStopHeater);
     }
     else if (currentTemperature > targetTemperature + heatingThresholdTemperature) {
       print("CurrentTemperature is higher than", targetTemperature + heatingThresholdTemperature,", stoping heater");
