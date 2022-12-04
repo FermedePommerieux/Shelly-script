@@ -149,7 +149,8 @@ function heatControl() {
 				holdTimer_handle = Timer.set(minHeatingTime,true,holdStopHeater);
 			}		
 		}
-		else if (currentTemperature > targetTemperature + heatingThresholdTemperature) {
+		else if ((currentTemperature > targetTemperature + heatingThresholdTemperature)&&
+		(currentHeatingCoolingState === "HEAT")) {
 			print("CurrentTemperature", currentTemperature ," is higher than",
 			 targetTemperature + heatingThresholdTemperature,", stoping heater");
 			if (( holdTimer )&&( currentTemperature < maxTargetTemperature)) {
