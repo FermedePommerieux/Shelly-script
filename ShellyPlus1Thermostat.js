@@ -43,7 +43,7 @@ let loadOnBootTimer=15*1000, isRunning=false, useExternalSensor=true, dataHasCha
 	topicExternalSensor = 'shellyplusht-c049ef8e1ddc/events/rpc',
 	targetTemperature=20, targetHeatingCoolingState="HEAT",
 	currentTemperature=targetTemperature,
-	currentHeatingCoolingState=targetHeatingCoolingState,
+	currentHeatingCoolingState=Shelly.getComponentStatus('switch:0').output ? "HEAT" : "OFF",
 	heatingThresholdTemperature=0.5, coolingThresholdTemperature=1,
 	topicThermostat=Shelly.getDeviceInfo().id + '/thermostat',
 	KVS_KEY = "thermostat", KVSTObj = null;
