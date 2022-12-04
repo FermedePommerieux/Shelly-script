@@ -112,17 +112,18 @@ function holdStopHeater() {
 
 function heatControl () {
 	if (targetHeatingCoolingState === "HEAT") {
-		if (currentTemperature < targetTemperature - coolingThresholdTemperature) {
+		if ((currentTemperature < targetTemperature - coolingThresholdTemperature)&&
+		(currentHeatingCoolingState === "HEAT")) { // does nothing if already heating
 			print("CurrentTemperature", currentTemperature ," is lower than ",
 			targetTemperature - coolingThresholdTemperature, ", starting heater");
 			currentHeatingCoolingState = "HEAT";
 			Shelly.call("Switch.Set", {'id': 0,'on': true}); // start heater
 			//Start timer for minHeatTime
-			if (holdTimer === false) { // to not start multiples Timers
+			if (!holdTimer) { // to not start multiples Timers
 				holdTimer=true; // prevent to stop before a specified time
 				print("Starting timer for", minHeatingTime, "ms" );
 				holdTimer_handle = Timer.set(minHeatingTime,true,holdStopHeater);
-			}
+			}		
 		}
 		else if (currentTemperature > targetTemperature + heatingThresholdTemperature) {
 			print("CurrentTemperature", currentTemperature ," is higher than",
