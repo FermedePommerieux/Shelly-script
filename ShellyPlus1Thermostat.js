@@ -37,8 +37,7 @@ Shelly.call("Switch.SetConfig", {
 // define initial values
 let useExternalSensor=true, dataHasChanged=false, controlTimer_handle=null,
 	minHeatingTime=10*60*1000, holdTimer=false, holdTimer_handle=null,
-	maxTargetTemperature=24, heatControlTimer=5*1000,
-    	saveDataTimer=5*1000, publishTargetTimer=15*60*1000,
+	maxTargetTemperature=24,
 	topicExternalSensor = 'shellyplusht-c049ef8e1ddc/events/rpc',
 	targetTemperature=20, targetHeatingCoolingState="HEAT",
 	currentTemperature=targetTemperature,
@@ -139,7 +138,7 @@ function heatControl () {
 			}
 		}
 	}
-	else {
+	else if (currentHeatingCoolingState === "HEAT" ) {
 		print("TargetHeatingCoolingState is set to OFF, stopping heater");
 		currentHeatingCoolingState = "OFF"; Timer.clear(timer_handle);
 		Shelly.call("Switch.Set", {'id': 0,'on': false}); // stop heater
@@ -153,9 +152,9 @@ publishTarget();
 publishCurrent();
 
 //lauch timers for MQTT publish, Data save and heatcontrol
-Timer.set(publishTargetTimer,true,publishTarget);
-Timer.set(heatControlTimer,true,heatControl);
-Timer.set(saveDataTimer,true,saveData);
+Timer.set(50000,true,publishTarget);
+Timer.set(50000,true,heatControl);
+Timer.set(15*60*1000,true,saveData);
 
 // Subscribe to target datas:
 MQTT.subscribe(topicThermostat + '/targetTemperature',
