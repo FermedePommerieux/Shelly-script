@@ -113,7 +113,7 @@ function holdStopHeater() {
 function heatControl () {
 	if (targetHeatingCoolingState === "HEAT") {
 		if ((currentTemperature < targetTemperature - coolingThresholdTemperature)&&
-		(currentHeatingCoolingState === "HEAT")) { // does nothing if already heating
+		(currentHeatingCoolingState !== "HEAT")) { // does nothing if already heating
 			print("CurrentTemperature", currentTemperature ," is lower than ",
 			targetTemperature - coolingThresholdTemperature, ", starting heater");
 			currentHeatingCoolingState = "HEAT";
