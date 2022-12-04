@@ -35,9 +35,9 @@ Shelly.call("Switch.SetConfig", {
 
 
 // define initial values
-let useExternalSensor=true, dataHasChanged=false, controlTimer_handle=null,
+let useExternalSensor=true, dataHasChanged=true, controlTimer_handle=null,
 	minHeatingTime=10*60*1000, holdTimer=false, holdTimer_handle=null,
-	maxTargetTemperature=24,
+	maxTargetTemperature=24, minTargetTemperature=16, minThresholdTemperature=0.5,
 	topicExternalSensor = 'shellyplusht-c049ef8e1ddc/events/rpc',
 	targetTemperature=20, targetHeatingCoolingState="HEAT",
 	currentTemperature=targetTemperature,
@@ -48,10 +48,27 @@ let useExternalSensor=true, dataHasChanged=false, controlTimer_handle=null,
 
 // Define some functions
 
+function checkData () {
+//validate targetTemperature
+	if (targetTemperature < minTargetTemperature - minThresholdTemperature)
+		targetTemperature = minTargetTemperature;
+	if (targetTemperature > maxTargetTemperature + minThresholdTemperature)
+		targetTemperature = maxTargetTemperature;
+//validate coolingThresholdTemperature
+	if (targetTemperature - coolingThresholdTemperature < minTargetTemperature)
+		coolingThresholdTemperature = targetTemperature - minTargetTemperature;
+	if (coolingThresholdTemperature < minThresholdTemperature)
+		coolingThresholdTemperature = minThresholdTemperature;
+//validate heatingThresholdTemperature
+	if (targetTemperature + heatingThresholdTemperature < maxTargetTemperature)
+		heatingThresholdTemperature = maxTargetTemperature - targetTemperature;
+	if (heatingThresholdTemperature < minThresholdTemperature)
+		heatingThresholdTemperature = minThresholdTemperature;
+}
 
 function saveData() {
-if (!dataHasChanged) return;
-print("Saving target Data to KVS", KVS_KEY);
+	if (!dataHasChanged) return;
+	print("Saving target Data to KVS", KVS_KEY);
 	KVSTObj = {
 	'targetTemperature': targetTemperature,
 	'targetHeatingCoolingState': targetHeatingCoolingState,
@@ -111,6 +128,7 @@ function holdStopHeater() {
 };
 
 function heatControl () {
+	if (dataHasChanged) checkData(); // to validate the target values
 	if (targetHeatingCoolingState === "HEAT") {
 		if ((currentTemperature < targetTemperature - coolingThresholdTemperature)&&
 		(currentHeatingCoolingState !== "HEAT")) { // does nothing if already heating
@@ -148,7 +166,7 @@ function heatControl () {
 
 // publish the initial target and current values
 getData(); // restore previous datas
-publishTarget();
+publishTarget(); // includes checkData()
 publishCurrent();
 
 //lauch timers for MQTT publish, Data save and heatcontrol
