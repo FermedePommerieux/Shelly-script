@@ -48,22 +48,26 @@ let useExternalSensor=true, dataHasChanged=true, controlTimer_handle=null,
 
 // Define some functions
 
-function checkData () {
+function validateTargetData () {
 //validate targetTemperature
-	if (targetTemperature < minTargetTemperature - minThresholdTemperature)
+	if (targetTemperature < minTargetTemperature)
 		targetTemperature = minTargetTemperature;
-	if (targetTemperature > maxTargetTemperature + minThresholdTemperature)
+	if (targetTemperature > maxTargetTemperature)
 		targetTemperature = maxTargetTemperature;
 //validate coolingThresholdTemperature
-	if (targetTemperature - coolingThresholdTemperature < minTargetTemperature)
-		coolingThresholdTemperature = targetTemperature - minTargetTemperature;
 	if (coolingThresholdTemperature < minThresholdTemperature)
 		coolingThresholdTemperature = minThresholdTemperature;
+// currentTemperature >=  minTargetTemperature - minThresholdTemperature
+	if (targetTemperature - coolingThresholdTemperature <
+	minTargetTemperature - minThresholdTemperature)
+		coolingThresholdTemperature = targetTemperature - minTargetTemperature;
 //validate heatingThresholdTemperature
-	if (targetTemperature + heatingThresholdTemperature < maxTargetTemperature)
-		heatingThresholdTemperature = maxTargetTemperature - targetTemperature;
 	if (heatingThresholdTemperature < minThresholdTemperature)
 		heatingThresholdTemperature = minThresholdTemperature;
+// currentTemperature =<  maxTargetTemperature + minThresholdTemperature
+	if (targetTemperature + heatingThresholdTemperature >
+	maxTargetTemperature + minThresholdTemperature)
+		heatingThresholdTemperature = maxTargetTemperature - targetTemperature;
 }
 
 function saveData() {
@@ -128,7 +132,7 @@ function holdStopHeater() {
 };
 
 function heatControl () {
-	if (dataHasChanged) checkData(); // to validate the target values
+	if (dataHasChanged) validateTargetData(); // to validate the target values
 	if (targetHeatingCoolingState === "HEAT") {
 		if ((currentTemperature < targetTemperature - coolingThresholdTemperature)&&
 		(currentHeatingCoolingState !== "HEAT")) { // does nothing if already heating
