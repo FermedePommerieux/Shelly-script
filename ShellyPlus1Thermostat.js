@@ -21,6 +21,13 @@ MQTT.publish(topicThermostat + '/currentTemperature',
 }
 */
 
+// define config values, time are in ms and degree in celsius.
+let minHeatingTime=10*60*1000, maxTargetTemperature=24,
+	minTargetTemperature=16, minThresholdTemperature=0.5,
+	targetTemperature=20, targetHeatingCoolingState="HEAT",
+	heatingThresholdTemperature=0.5, coolingThresholdTemperature=1,
+	useExternalSensor=false, topicExternalSensor='shellyplusht-XXXXXXXXX/events/rpc';
+
 
 print("Starting Ferme de Pommerieux's ShellyPlus1 Thermostat Script");
 
@@ -35,18 +42,15 @@ Shelly.call("Switch.SetConfig", {
 
 
 // define initial values
-let loadOnBootTimer=15*1000, isRunning=false, useExternalSensor=true, dataHasChanged=true,
-	controlTimer_handle=null, minHeatingTime=10*60*1000, holdTimer=false,
-	holdTimer_handle=null, publishTargetTimer=5*1000, heatControlTimer=5*1000,
-	saveDataTimer=15*60*1000, maxTargetTemperature=24,
-	minTargetTemperature=16, minThresholdTemperature=0.5,
-	topicExternalSensor = 'shellyplusht-c049ef8e1ddc/events/rpc',
-	targetTemperature=20, targetHeatingCoolingState="HEAT",
+let loadOnBootTimer=15*1000, publishTargetTimer=5*1000, heatControlTimer=5*1000,
+	saveDataTimer=15*60*1000, isRunning=false, dataHasChanged=true,
+	controlTimer_handle=null, holdTimer=false, holdTimer_handle=null,
 	currentTemperature=targetTemperature,
 	currentHeatingCoolingState=Shelly.getComponentStatus('switch:0').output ? "HEAT" : "OFF",
-	heatingThresholdTemperature=0.5, coolingThresholdTemperature=1,
 	topicThermostat=Shelly.getDeviceInfo().id + '/thermostat',
-	KVS_KEY = "thermostat", KVSTObj = null;
+	KVS_KEY='thermostat', KVSTObj = null;
+	
+if (!useExternalSensor) topicExternalSensor =  null;
 
 // Define some functions
 
