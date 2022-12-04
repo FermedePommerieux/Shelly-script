@@ -178,17 +178,27 @@ function heatControl() {
 function thermostat () {
 //exit if no active MQTT connection or already running
 if ((!MQTT.isConnected())||(isRunning)) return;
-
+// ok we are running now
 isRunning = true;
+// restore previous datas
+getData();
 
 // publish the initial target and current values
-getData(); // restore previous datas
-publishTarget(); // includes checkData()
+publishTarget();
 publishCurrent();
 
 //lauch timers for MQTT publish, Data save and heatcontrol
-Timer.set(publishTargetTimer,true,publishTarget);
-Timer.set(heatControlTimer,true,heatControl);
+// Note i could merge heatControl and publishTarget if i need another timer
+if (publishTargetTimer !== heatControlTimer) {
+	Timer.set(publishTargetTimer,true,publishTarget);
+	Timer.set(heatControlTimer,true,heatControl);
+	}
+else { // reducing timers usage
+	Timer.set(publishTargetTimer,true,function () {
+		publishTarget();
+		heatControl();
+		});
+	}
 Timer.set(saveDataTimer,true,saveData);
 
 // Subscribe to target datas:
