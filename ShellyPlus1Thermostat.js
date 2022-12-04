@@ -24,7 +24,7 @@ MQTT.publish(topicThermostat + '/currentTemperature',
 
 print("Starting Ferme de Pommerieux's ShellyPlus1 Thermostat Script");
 
-if (!MQTT.isConnected()) die('No MQTT connection !'); //exit if no active MQTT connection
+
 // detach the input : we don't need it
 Shelly.call("Switch.SetConfig", {
 	id: 0,
@@ -35,9 +35,11 @@ Shelly.call("Switch.SetConfig", {
 
 
 // define initial values
-let useExternalSensor=true, dataHasChanged=true, controlTimer_handle=null,
-	minHeatingTime=10*60*1000, holdTimer=false, holdTimer_handle=null,
-	maxTargetTemperature=24, minTargetTemperature=16, minThresholdTemperature=0.5,
+let loadOnBootTimer=15*1000, isRunning=false, useExternalSensor=true, dataHasChanged=true,
+	controlTimer_handle=null, minHeatingTime=10*60*1000, holdTimer=false,
+	holdTimer_handle=null, publishTargetTimer=5*1000, heatControlTimer=5*1000,
+	saveDataTimer=15*60*1000, maxTargetTemperature=24,
+	minTargetTemperature=16, minThresholdTemperature=0.5,
 	topicExternalSensor = 'shellyplusht-c049ef8e1ddc/events/rpc',
 	targetTemperature=20, targetHeatingCoolingState="HEAT",
 	currentTemperature=targetTemperature,
@@ -48,7 +50,7 @@ let useExternalSensor=true, dataHasChanged=true, controlTimer_handle=null,
 
 // Define some functions
 
-function validateTargetData () {
+function validateTargetData() {
 //validate targetTemperature
 	if (targetTemperature < minTargetTemperature)
 		targetTemperature = minTargetTemperature;
@@ -131,7 +133,7 @@ function holdStopHeater() {
 	holdTimer = false;
 };
 
-function heatControl () {
+function heatControl() {
 	if (dataHasChanged) validateTargetData(); // to validate the target values
 	if (targetHeatingCoolingState === "HEAT") {
 		if ((currentTemperature < targetTemperature - coolingThresholdTemperature)&&
@@ -168,15 +170,21 @@ function heatControl () {
 	publishCurrent();
 	};
 
+function thermostat () {
+//exit if no active MQTT connection or already running
+if ((!MQTT.isConnected())||(isRunning)) return;
+
+isRunning = true;
+
 // publish the initial target and current values
 getData(); // restore previous datas
 publishTarget(); // includes checkData()
 publishCurrent();
 
 //lauch timers for MQTT publish, Data save and heatcontrol
-Timer.set(50000,true,publishTarget);
-Timer.set(50000,true,heatControl);
-Timer.set(15*60*1000,true,saveData);
+Timer.set(publishTargetTimer,true,publishTarget);
+Timer.set(heatControlTimer,true,heatControl);
+Timer.set(saveDataTimer,true,saveData);
 
 // Subscribe to target datas:
 MQTT.subscribe(topicThermostat + '/targetTemperature',
@@ -244,3 +252,6 @@ if (!useExternalSensor) {
 	}
 	}
 });
+};
+
+Timer.set(loadOnBootTimer,true,thermostat);
