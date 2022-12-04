@@ -45,7 +45,7 @@ Shelly.call("Switch.SetConfig", {
 let loadOnBootTimer=15*1000, publishTargetTimer=5*1000, heatControlTimer=5*1000,
 	saveDataTimer=15*60*1000, isRunning=false, dataHasChanged=true,
 	controlTimer_handle=null, holdTimer=false, holdTimer_handle=null,
-	currentTemperature=targetTemperature,
+	loadOnBootTimer_handle=null, currentTemperature=targetTemperature,
 	currentHeatingCoolingState=Shelly.getComponentStatus('switch:0').output ? "HEAT" : "OFF",
 	topicThermostat=Shelly.getDeviceInfo().id + '/thermostat',
 	KVS_KEY='thermostat', KVSTObj = null;
@@ -178,8 +178,9 @@ function heatControl() {
 function thermostat () {
 //exit if no active MQTT connection or already running
 if ((!MQTT.isConnected())||(isRunning)) return;
-// ok we are running now
-isRunning = true;
+// ok we are running now, try to clear the loadOnBootTimer to reduce memmory usage
+isRunning = true; Timer.clear(loadOnBootTimer_handle);
+print('LoadOnBootTimer cleared');
 // restore previous datas
 getData();
 
@@ -269,4 +270,4 @@ if (!useExternalSensor) {
 });
 };
 
-Timer.set(loadOnBootTimer,true,thermostat);
+loadOnBootTimer_handle = Timer.set(loadOnBootTimer,true,thermostat);
