@@ -56,24 +56,37 @@ if (!useExternalSensor) topicExternalSensor =  null;
 
 function validateTargetData() {
 //validate targetTemperature
-	if (targetTemperature < minTargetTemperature)
-		targetTemperature = minTargetTemperature;
-	if (targetTemperature > maxTargetTemperature)
-		targetTemperature = maxTargetTemperature;
+	if (targetTemperature < minTargetTemperature) {
+	   targetTemperature = minTargetTemperature;
+       print("targetTemperature < minTargetTemperature");
+    }
+	if (targetTemperature > maxTargetTemperature) {
+      targetTemperature = maxTargetTemperature;
+      print(targetTemperature > maxTargetTemperature);
+    }	
 //validate coolingThresholdTemperature
-	if (coolingThresholdTemperature < minThresholdTemperature)
-		coolingThresholdTemperature = minThresholdTemperature;
+	if (coolingThresholdTemperature < minThresholdTemperature) {
+      coolingThresholdTemperature = minThresholdTemperature;
+      print("coolingThresholdTemperature < minThresholdTemperature");
+    }
 // currentTemperature >=  minTargetTemperature - minThresholdTemperature
 	if (targetTemperature - coolingThresholdTemperature <
-	minTargetTemperature - minThresholdTemperature)
-		coolingThresholdTemperature = targetTemperature - minTargetTemperature;
+	minTargetTemperature - minThresholdTemperature) {
+    coolingThresholdTemperature = targetTemperature - minTargetTemperature;
+    print("targetTemperature - coolingThresholdTemperature <
+	minTargetTemperature - minThresholdTemperature");
+    }
+
 //validate heatingThresholdTemperature
-	if (heatingThresholdTemperature < minThresholdTemperature)
+	if (heatingThresholdTemperature < minThresholdTemperature) {
 		heatingThresholdTemperature = minThresholdTemperature;
+print("heatingThresholdTemperature < minThresholdTemperature");}
 // currentTemperature =<  maxTargetTemperature + minThresholdTemperature
 	if (targetTemperature + heatingThresholdTemperature >
-	maxTargetTemperature + minThresholdTemperature)
+	maxTargetTemperature + minThresholdTemperature) {
 		heatingThresholdTemperature = maxTargetTemperature - targetTemperature;
+print("targetTemperature + heatingThresholdTemperature >
+	maxTargetTemperature + minThresholdTemperature")}
 }
 
 function saveData() {
@@ -174,6 +187,8 @@ function heatControl() {
 	}
 	publishCurrent();
 	};
+	
+
 
 function thermostat () {
 //exit if no active MQTT connection or already running
@@ -203,26 +218,34 @@ else { // reducing timers usage
 Timer.set(saveDataTimer,true,saveData);
 
 // Subscribe to target datas:
+//Note, to avoid continious majoration of values due to approximation of JSON.parse()
+// i reject minor change less than 0.4, instead it will increase by 0.000001 every 5s
 MQTT.subscribe(topicThermostat + '/targetTemperature',
  function (topic, message) {
 	if (typeof message === "undefined") return;
 	message = JSON.parse(message);
 	if (typeof message !== "number") return;
-	if (targetTemperature === message ) return;
-	print("targetTemperature is now:",message, " instead of ",
-	 targetTemperature);
-	targetTemperature = message;
-	dataHasChanged=true;
+	if ((targetTemperature < message - 0.4)||
+	(targetTemperature > message + 0.4)) {
+		print("Received new message from", topicThermostat +
+		 '/targetTemperature:', JSON.stringify(message));
+		print("targetTemperature is now:",JSON.stringify(message), " instead of ",
+		 JSON.stringify(targetTemperature));
+		targetTemperature = message;
+		dataHasChanged=true;
+	}
 });
 MQTT.subscribe(topicThermostat + '/targetHeatingCoolingState',
  function (topic, message) {
 	if (typeof message === "undefined") return;
 	if (typeof message !== "string") return;
 	if ((message !== "HEAT")||("OFF")) return;
-	if (targetHeatingCoolingState === message ) return;
-	print("targetHeatingCoolingState is now:",message, " instead of ",
-	 targetHeatingCoolingState);
-	targetHeatingCoolingState = JSON.parse(message);
+	if (targetHeatingCoolingState === message) return;
+	print("Received new message from", topicThermostat +
+	 '/targetHeatingCoolingState:', JSON.stringify(message));
+	print("targetHeatingCoolingState is now:",JSON.stringify(message), " instead of ",
+	 JSON.stringify(targetHeatingCoolingState));
+	targetHeatingCoolingState = message;
 	dataHasChanged=true;
 });
 MQTT.subscribe(topicThermostat + '/heatingThresholdTemperature',
@@ -230,22 +253,30 @@ MQTT.subscribe(topicThermostat + '/heatingThresholdTemperature',
 	if (typeof message === "undefined") return;
 	message = JSON.parse(message);
 	if (typeof message !== "number") return;
-	if (heatingThresholdTemperature === message ) return;
-	print("heatingThresholdTemperature is now:",message, " instead of ",
-	 heatingThresholdTemperature);
-	heatingThresholdTemperature = message;
-	dataHasChanged=true;
+	if ((heatingThresholdTemperature < message - 0.4)||
+	(heatingThresholdTemperature > message + 0.4)) {
+		print("Received new message from", topicThermostat +
+		 '/heatingThresholdTemperature:', JSON.stringify(message));
+		print("heatingThresholdTemperature is now:",JSON.stringify(message), " instead of ",
+		 JSON.stringify(targetTemperature));
+		heatingThresholdTemperature = message;
+		dataHasChanged=true;
+	}
 });
 MQTT.subscribe(topicThermostat + '/coolingThresholdTemperature',
  function (topic, message) {
 	if (typeof message === "undefined") return;
 	message = JSON.parse(message);
 	if (typeof message !== "number") return;
-	if (coolingThresholdTemperature === message ) return;
-	print("coolingThresholdTemperature is now:", typeof message, " instead of ",
-	 coolingThresholdTemperature);
-	coolingThresholdTemperature = message;
-	dataHasChanged=true;
+	if ((coolingThresholdTemperature < message - 0.4)||
+	(coolingThresholdTemperature > message + 0.4)) {
+		print("Received new message from", topicThermostat +
+		 '/coolingThresholdTemperature:', JSON.stringify(message));
+		print("coolingThresholdTemperature is now:",JSON.stringify(message), " instead of ",
+		 JSON.stringify(targetTemperature));
+		coolingThresholdTemperature = message;
+		dataHasChanged=true;
+	}
 });
 
 //Subscribe to an external Sensor if needed
@@ -283,7 +314,4 @@ if (!useExternalSensor) {
 });
 };
 
-
-// Now load a timer to launch the thermostat() and wait until the device is fully
-//connected to a MQTT broker,
 loadOnBootTimer_handle = Timer.set(loadOnBootTimer,true,thermostat);
