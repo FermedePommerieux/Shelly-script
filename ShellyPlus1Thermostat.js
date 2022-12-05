@@ -26,7 +26,7 @@ let minHeatingTime=10*60*1000, maxTargetTemperature=24,
 	minTargetTemperature=16, minThresholdTemperature=0.5,
 	targetTemperature=20, targetHeatingCoolingState="HEAT",
 	heatingThresholdTemperature=0.5, coolingThresholdTemperature=1,
-	useExternalSensor=false, topicExternalSensor='shellyplusht-XXXXXXXXXXXX/events/rpc';
+	useExternalSensor=true, topicExternalSensor='shellyplusht-c049ef8e1ddc/events/rpc';
 
 
 print("Starting Ferme de Pommerieux's ShellyPlus1 Thermostat Script");
@@ -42,54 +42,54 @@ Shelly.call("Switch.SetConfig", {
 
 
 // define initial values
-let loadOnBootTimer=15*1000, publishTargetTimer=5*1000, heatControlTimer=5*1000,
-	saveDataTimer=15*60*1000, isRunning=false, dataHasChanged=true,
-	controlTimer_handle=null, holdTimer=false, holdTimer_handle=null,
-	loadOnBootTimer_handle=null, currentTemperature=targetTemperature,
-	currentHeatingCoolingState=Shelly.getComponentStatus('switch:0').output ? "HEAT" : "OFF",
-	topicThermostat=Shelly.getDeviceInfo().id + '/thermostat',
-	KVS_KEY='thermostat', KVSTObj = null;
+let loadOnBootTimer = 15*1000, publishTargetTimer = 5*1000, heatControlTimer = 5*1000,
+	saveDataTimer = 15*60*1000, isRunning = false, dataHasChanged = true,
+	controlTimer_handle = null, holdTimer = false, holdTimer_handle = null,
+	loadOnBootTimer_handle = null, currentTemperature = targetTemperature,
+	currentHeatingCoolingState = Shelly.getComponentStatus('switch:0').output ? "HEAT" : "OFF",
+	topicThermostat = Shelly.getDeviceInfo().id + '/thermostat',
+	KVS_KEY = 'thermostat', KVSTObj = null;
 	
-if (!useExternalSensor) topicExternalSensor =  null;
+if (!useExternalSensor) topicExternalSensor = null;
 
 // Define some functions
 
-function validateTargetData() {
+function validateTargetData () {
 //validate targetTemperature
 	if (targetTemperature < minTargetTemperature) {
-	   targetTemperature = minTargetTemperature;
-       print("targetTemperature < minTargetTemperature");
-    }
+		targetTemperature = minTargetTemperature;
+		print("targetTemperature < minTargetTemperature");
+	}
 	if (targetTemperature > maxTargetTemperature) {
-      targetTemperature = maxTargetTemperature;
-      print(targetTemperature > maxTargetTemperature);
-    }	
+		targetTemperature = maxTargetTemperature;
+		print(targetTemperature > maxTargetTemperature);
+	}	
 //validate coolingThresholdTemperature
 	if (coolingThresholdTemperature < minThresholdTemperature) {
-      coolingThresholdTemperature = minThresholdTemperature;
-      print("coolingThresholdTemperature < minThresholdTemperature");
-    }
-// currentTemperature >=  minTargetTemperature - minThresholdTemperature
+		coolingThresholdTemperature = minThresholdTemperature;
+		print("coolingThresholdTemperature < minThresholdTemperature");
+	}
+// currentTemperature >=	minTargetTemperature - minThresholdTemperature
 	if (targetTemperature - coolingThresholdTemperature <
-	minTargetTemperature - minThresholdTemperature) {
-    coolingThresholdTemperature = targetTemperature - minTargetTemperature;
-    print("targetTemperature - coolingThresholdTemperature <
-	minTargetTemperature - minThresholdTemperature");
-    }
-
+	 minTargetTemperature - minThresholdTemperature) {
+		coolingThresholdTemperature = targetTemperature - minTargetTemperature;
+		print("targetTemperature - coolingThresholdTemperature <",
+		 "minTargetTemperature - minThresholdTemperature");
+	}
 //validate heatingThresholdTemperature
 	if (heatingThresholdTemperature < minThresholdTemperature) {
 		heatingThresholdTemperature = minThresholdTemperature;
-print("heatingThresholdTemperature < minThresholdTemperature");}
-// currentTemperature =<  maxTargetTemperature + minThresholdTemperature
+		print("heatingThresholdTemperature < minThresholdTemperature");}
+// currentTemperature =< maxTargetTemperature + minThresholdTemperature
 	if (targetTemperature + heatingThresholdTemperature >
-	maxTargetTemperature + minThresholdTemperature) {
+	 maxTargetTemperature + minThresholdTemperature) {
 		heatingThresholdTemperature = maxTargetTemperature - targetTemperature;
-print("targetTemperature + heatingThresholdTemperature >
-	maxTargetTemperature + minThresholdTemperature")}
-}
+		print("targetTemperature + heatingThresholdTemperature >",
+		 "maxTargetTemperature + minThresholdTemperature")
+	}
+};
 
-function saveData() {
+function saveData () {
 	if (!dataHasChanged) return;
 	print("Saving target Data to KVS", KVS_KEY);
 	KVSTObj = {
@@ -101,9 +101,9 @@ function saveData() {
 		},
 	Shelly.call("KVS.Set", { key: KVS_KEY, value: KVSTObj });
 	dataHasChanged=false;
-}
+};
 
-function getData() {
+function getData () {
 	print("Reading from ", KVS_KEY);
 	Shelly.call(
 		"KVS.Get",
@@ -125,7 +125,7 @@ function getData() {
 			}
 		}
 	);
-}
+};
 
 function publishTarget() {
 	MQTT.publish(topicThermostat + '/targetTemperature',
@@ -136,19 +136,15 @@ function publishTarget() {
 	 JSON.stringify(heatingThresholdTemperature), 0, false);
 	MQTT.publish(topicThermostat + '/coolingThresholdTemperature',
 	 JSON.stringify(coolingThresholdTemperature), 0, false);
-}
+};
 
 function publishCurrent() {
 	MQTT.publish(topicThermostat + '/currentHeatingCoolingState',
 	 JSON.stringify(currentHeatingCoolingState), 0, false);
 	MQTT.publish(topicThermostat + '/currentTemperature',
 	 JSON.stringify(currentTemperature) , 0, false);
-}
-
-function holdStopHeater() {
-	print("Timer resumed");
-	holdTimer = false;
 };
+
 
 function heatControl() {
 	if (dataHasChanged) validateTargetData(); // to validate the target values
@@ -163,7 +159,8 @@ function heatControl() {
 			if (!holdTimer) { // to not start multiples Timers
 				holdTimer=true; // prevent to stop before a specified time
 				print("Starting timer for", minHeatingTime, "ms" );
-				holdTimer_handle = Timer.set(minHeatingTime,true,holdStopHeater);
+				holdTimer_handle = Timer.set(minHeatingTime,true,function() {
+					print("Timer resumed"); holdTimer = false;});
 			}		
 		}
 		else if ((currentTemperature > targetTemperature + heatingThresholdTemperature)&&
@@ -186,16 +183,16 @@ function heatControl() {
 		Shelly.call("Switch.Set", {'id': 0,'on': false}); // stop heater
 	}
 	publishCurrent();
-	};
+};
 	
-
-
-function thermostat () {
+// create the thermostat function to load it in a timer
+function thermostat() {
 //exit if no active MQTT connection or already running
 if ((!MQTT.isConnected())||(isRunning)) return;
 // ok we are running now, try to clear the loadOnBootTimer to reduce memmory usage
 isRunning = true; Timer.clear(loadOnBootTimer_handle);
-print('LoadOnBootTimer cleared');
+print('Thermostat Running, LoadOnBootTimer cleared');
+
 // restore previous datas
 getData();
 
@@ -203,14 +200,14 @@ getData();
 publishTarget();
 publishCurrent();
 
-//lauch timers for MQTT publish, Data save and heatcontrol
+//Lauch timers for MQTT publish, Data save and heatcontrol
 // Note i could merge heatControl and publishTarget if i need another timer
 if (publishTargetTimer !== heatControlTimer) {
 	Timer.set(publishTargetTimer,true,publishTarget);
 	Timer.set(heatControlTimer,true,heatControl);
 	}
 else { // reducing timers usage
-	Timer.set(publishTargetTimer,true,function () {
+	Timer.set(publishTargetTimer,true,function() {
 		publishTarget();
 		heatControl();
 		});
@@ -314,4 +311,5 @@ if (!useExternalSensor) {
 });
 };
 
+// Start thermostat() in a Timer, to wait until the device is fully ready
 loadOnBootTimer_handle = Timer.set(loadOnBootTimer,true,thermostat);
