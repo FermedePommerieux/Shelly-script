@@ -65,7 +65,7 @@
  	}
  	if (targetTemperature > maxTargetTemperature) {
  		targetTemperature = maxTargetTemperature;
- 		print(targetTemperature > maxTargetTemperature);
+ 		print("targetTemperature > maxTargetTemperature");
  	}
  	//validate coolingThresholdTemperature
  	if (coolingThresholdTemperature < minThresholdTemperature) {
