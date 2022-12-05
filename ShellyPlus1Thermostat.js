@@ -109,7 +109,7 @@
  	MQTT.publish(topicThermostat + '/targetTemperature',
  		JSON.stringify(targetTemperature), 0, false);
  	MQTT.publish(topicThermostat + '/targetHeatingCoolingState',
- 		JSON.stringify(targetHeatingCoolingState), 0, false);
+ 		targetHeatingCoolingState, 0, false);
  	MQTT.publish(topicThermostat + '/heatingThresholdTemperature',
  		JSON.stringify(heatingThresholdTemperature), 0, false);
  	MQTT.publish(topicThermostat + '/coolingThresholdTemperature',
@@ -118,7 +118,7 @@
 
  function publishCurrent() {
  	MQTT.publish(topicThermostat + '/currentHeatingCoolingState',
- 		JSON.stringify(currentHeatingCoolingState), 0, false);
+ 		currentHeatingCoolingState, 0, false);
  	MQTT.publish(topicThermostat + '/currentTemperature',
  		JSON.stringify(currentTemperature), 0, false);
  };
@@ -251,15 +251,14 @@
  		function(topic, message) {
  			if (typeof message === "undefined") return;
  			if (typeof message !== "string") return;
- 			if ((message !== "HEAT") || ("OFF")) return;
  			if (targetHeatingCoolingState === message) return;
  			print("Received new message from", topicThermostat +
- 				'/targetHeatingCoolingState:', JSON.stringify(message)
+ 				'/targetHeatingCoolingState:', message
  			);
- 			print("targetHeatingCoolingState is now:", JSON.stringify(
- 					message),
+ 			print("targetHeatingCoolingState is now:", 
+ 					message,
  				" instead of ",
- 				JSON.stringify(targetHeatingCoolingState));
+ 				targetHeatingCoolingState);
  			targetHeatingCoolingState = message;
  			dataHasChanged = true;
  		});
