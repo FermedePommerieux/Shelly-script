@@ -53,8 +53,7 @@
  	currentHeatingCoolingState = Shelly.getComponentStatus('switch:0').output ?
  	"HEAT" : "OFF",
  	topicThermostat = Shelly.getDeviceInfo().id + '/thermostat',
- 	KVS_KEY = 'thermostat',
- 	KVSTObj = null;
+ 	KVS_KEY = 'thermostat';
  if (!useExternalSensor) topicExternalSensor = null;
  // Define some functions
  function validateTargetData() {
@@ -96,17 +95,16 @@
  function saveData() {
  	if (!dataHasChanged) return;
  	print("Saving target Data to KVS", KVS_KEY);
- 	KVSTObj = {
+ 	Shelly.call("KVS.Set", {
+ 		key: KVS_KEY,
+ 		value: {
  			'targetTemperature': targetTemperature,
  			'targetHeatingCoolingState': targetHeatingCoolingState,
  			'heatingThresholdTemperature': heatingThresholdTemperature,
  			'coolingThresholdTemperature': coolingThresholdTemperature,
  			'minHeatingTime': minHeatingTime,
- 		},
- 		Shelly.call("KVS.Set", {
- 			key: KVS_KEY,
- 			value: KVSTObj
- 		});
+ 		}
+ 	});
  	dataHasChanged = false;
  };
 
