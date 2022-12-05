@@ -20,13 +20,14 @@
           */
  // define config values, time are in ms and degree in celsius.
  let minHeatingTime = 10 * 60 * 1000,
- 	maxTargetTemperature = 24,
- 	minTargetTemperature = 16,
- 	minThresholdTemperature = 0.5,
- 	targetTemperature = 20,
+ 	targetTemperature = 20.5,
  	targetHeatingCoolingState = "HEAT",
- 	heatingThresholdTemperature = 0.5,
- 	coolingThresholdTemperature = 1,
+ 	heatingThresholdTemperature = 19,
+ 	coolingThresholdTemperature = 21,
+ 	minAllowedTemperature = 16,
+ 	maxAllowedTemperature = 24,
+ 	minDeltaCoolingTemperature = 1,
+ 	minDeltaHeatingTemperature = 0.5,
  	useExternalSensor = true,
  	topicExternalSensor = 'shellyplusht-c049ef8e1ddc/events/rpc';
  	
@@ -43,10 +44,14 @@
  	publishTargetTimer = 5 * 1000,
  	heatControlTimer = 5 * 1000,
  	saveDataTimer = 15 * 60 * 1000,
+ 	deltaCoolingTemperature = targetTemperature - coolingThresholdTemperature,
+ 	deltaHeatingTemperature = heatingThresholdTemperature - targetTemperature,
  	isRunning = false,
  	dataHasChanged = true,
- 	controlTimer_handle = null,
  	holdTimer = false,
+ 	controlTimer_handle = null,
+ 	publishTargetTimer_handle = null,
+ 	saveDataTimer_handle = null,
  	holdTimer_handle = null,
  	loadOnBootTimer_handle = null,
  	currentTemperature = targetTemperature,
@@ -55,42 +60,8 @@
  	topicThermostat = Shelly.getDeviceInfo().id + '/thermostat',
  	KVS_KEY = 'thermostat';
  if (!useExternalSensor) topicExternalSensor = null;
+ 
  // Define some functions
- function validateTargetData() {
- 	//validate targetTemperature
- 	if (targetTemperature < minTargetTemperature) {
- 		targetTemperature = minTargetTemperature;
- 		print("targetTemperature < minTargetTemperature");
- 	}
- 	if (targetTemperature > maxTargetTemperature) {
- 		targetTemperature = maxTargetTemperature;
- 		print("targetTemperature > maxTargetTemperature");
- 	}
- 	//validate coolingThresholdTemperature
- 	if (coolingThresholdTemperature < minThresholdTemperature) {
- 		coolingThresholdTemperature = minThresholdTemperature;
- 		print("coolingThresholdTemperature < minThresholdTemperature");
- 	}
- 	// currentTemperature >=	minTargetTemperature - minThresholdTemperature
- 	if (targetTemperature - coolingThresholdTemperature <
- 		minTargetTemperature - minThresholdTemperature) {
- 		coolingThresholdTemperature = targetTemperature - minTargetTemperature;
- 		print("targetTemperature - coolingThresholdTemperature <",
- 			"minTargetTemperature - minThresholdTemperature");
- 	}
- 	//validate heatingThresholdTemperature
- 	if (heatingThresholdTemperature < minThresholdTemperature) {
- 		heatingThresholdTemperature = minThresholdTemperature;
- 		print("heatingThresholdTemperature < minThresholdTemperature");
- 	}
- 	// currentTemperature =< maxTargetTemperature + minThresholdTemperature
- 	if (targetTemperature + heatingThresholdTemperature >
- 		maxTargetTemperature + minThresholdTemperature) {
- 		heatingThresholdTemperature = maxTargetTemperature - targetTemperature;
- 		print("targetTemperature + heatingThresholdTemperature >",
- 			"maxTargetTemperature + minThresholdTemperature")
- 	}
- };
 
  function saveData() {
  	if (!dataHasChanged) return;
@@ -124,7 +95,9 @@
  				targetHeatingCoolingState = result.targetHeatingCoolingState;
  				heatingThresholdTemperature = result.heatingThresholdTemperature;
  				coolingThresholdTemperature = result.coolingThresholdTemperature;
- 				minHeatingTime = result.minHeatingTime;
+ 				minHeatingTime = result.minHeatingTime,
+				deltaCoolingTemperature = targetTemperature - coolingThresholdTemperature;
+			 	deltaHeatingTemperature = heatingThresholdTemperature - targetTemperature;
  				return;
  			}
  		}
@@ -150,13 +123,12 @@
  };
 
  function heatControl() {
- 	if (dataHasChanged) validateTargetData(); // to validate the target values
+ //	if (dataHasChanged) validateTargetData(); // to validate the target values
  	if (targetHeatingCoolingState === "HEAT") {
- 		if ((currentTemperature < targetTemperature -
- 				coolingThresholdTemperature) &&
+ 		if ((currentTemperature < coolingThresholdTemperature) &&
  			(currentHeatingCoolingState !== "HEAT")) { // does nothing if already heating
  			print("CurrentTemperature", currentTemperature, " is lower than ",
- 				targetTemperature - coolingThresholdTemperature,
+ 				coolingThresholdTemperature,
  				", starting heater");
  			currentHeatingCoolingState = "HEAT";
  			Shelly.call("Switch.Set", {
@@ -172,13 +144,12 @@
  					holdTimer = false;
  				});
  			}
- 		} else if ((currentTemperature > targetTemperature +
- 				heatingThresholdTemperature) &&
+ 		} else if ((currentTemperature > heatingThresholdTemperature) &&
  			(currentHeatingCoolingState === "HEAT")) {
  			print("CurrentTemperature", currentTemperature, " is higher than",
- 				targetTemperature + heatingThresholdTemperature,
+ 				heatingThresholdTemperature,
  				", stoping heater");
- 			if ((holdTimer) && (currentTemperature < maxTargetTemperature)) {
+ 			if ((holdTimer) && (currentTemperature < maxAllowedTemperature)) {
  				print("minHeatTime not reached, waiting until timer resumes");
  			} else {
  				currentHeatingCoolingState = "OFF";
@@ -200,6 +171,16 @@
  	}
  	publishCurrent();
  };
+ // reload function, clear all timers for debugging
+ function cleanTimers() {
+ 	print("Clearing all timers...");
+ 	Timer.clear(controlTimer_handle);
+ 	Timer.clear(publishTargetTimer_handle);
+ 	Timer.clear(saveDataTimer_handle);
+ 	Timer.clear(holdTimer_handle);
+ 	Timer.clear(loadOnBootTimer_handle);
+ }
+ 
  // create the thermostat function to load it in a timer
  function thermostat() {
  	//exit if no active MQTT connection or already running
@@ -216,8 +197,8 @@
  	//Lauch timers for MQTT publish, Data save and heatcontrol
  	// Note i could merge heatControl and publishTarget if i need another timer
  	if (publishTargetTimer !== heatControlTimer) {
- 		Timer.set(publishTargetTimer, true, publishTarget);
- 		Timer.set(heatControlTimer, true, heatControl);
+ 		publishTargetTimer_handle = Timer.set(publishTargetTimer, true, publishTarget);
+ 		heatControlTimer_handle = Timer.set(heatControlTimer, true, heatControl);
  	} else { // reducing timers usage
  		Timer.set(publishTargetTimer, true, function() {
  			publishTarget();
@@ -234,13 +215,29 @@
  			message = JSON.parse(message);
  			if (typeof message !== "number") return;
  			if ((targetTemperature < message - 0.4) ||
- 				(targetTemperature > message + 0.4)) {
+ 				(targetTemperature > message + 0.4)) { 
  				print("Received new message from", topicThermostat +
  					'/targetTemperature:', JSON.stringify(message));
  				print("targetTemperature is now:", JSON.stringify(message),
  					" instead of ",
  					JSON.stringify(targetTemperature));
- 				targetTemperature = message;
+ 				if ((message - minDeltaCoolingTemperature < minAllowedTemperature) ||
+ 					(message - deltaCoolingTemperature < minAllowedTemperature)) {
+ 					targetTemperature = minAllowedTemperature +	minDeltaCoolingTemperature;
+ 					coolingThresholdTemperature = minAllowedTemperature;
+ 					deltaCoolingTemperature = minDeltaCoolingTemperature;
+ 				}
+ 				else if ((message + minDeltaHeatingTemperature > maxAllowedTemperature) ||
+ 					(message + deltaHeatingTemperature > maxAllowedTemperature)) {
+ 					targetTemperature = maxAllowedTemperature -	minDeltaHeatingTemperature;
+ 					heatingThresholdTemperature = maxAllowedTemperature;
+ 					deltaHeatingTemperature = minDeltaHeatingTemperature;
+ 				}
+ 				else {
+ 					targetTemperature = message;
+					coolingThresholdTemperature = targetTemperature - deltaCoolingTemperature;
+			 		heatingThresholdTemperature = targetTemperature + deltaHeatingTemperature;
+			 	}
  				dataHasChanged = true;
  			}
  		});
@@ -265,6 +262,8 @@
  			if (typeof message === "undefined") return;
  			message = JSON.parse(message);
  			if (typeof message !== "number") return;
+ 			if ((message < minAllowedTemperature) ||
+ 				(message > maxAllowedTemperature)) return;
  			if ((heatingThresholdTemperature < message - 0.4) ||
  				(heatingThresholdTemperature > message + 0.4)) {
  				print("Received new message from", topicThermostat +
@@ -273,8 +272,9 @@
  				print("heatingThresholdTemperature is now:", JSON.stringify(
  						message),
  					" instead of ",
- 					JSON.stringify(targetTemperature));
+ 					JSON.stringify(targetTemperature));			
  				heatingThresholdTemperature = message;
+ 			 	targetTemperature = heatingThresholdTemperature - deltaHeatingTemperature;
  				dataHasChanged = true;
  			}
  		});
@@ -283,6 +283,8 @@
  			if (typeof message === "undefined") return;
  			message = JSON.parse(message);
  			if (typeof message !== "number") return;
+ 			if ((message < minAllowedTemperature) ||
+ 				(message > maxAllowedTemperature)) return;
  			if ((coolingThresholdTemperature < message - 0.4) ||
  				(coolingThresholdTemperature > message + 0.4)) {
  				print("Received new message from", topicThermostat +
@@ -293,6 +295,7 @@
  					" instead of ",
  					JSON.stringify(targetTemperature));
  				coolingThresholdTemperature = message;
+ 			 	targetTemperature = coolingThresholdTemperature + deltacoolingTemperature;
  				dataHasChanged = true;
  			}
  		});
