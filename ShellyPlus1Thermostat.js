@@ -26,7 +26,7 @@ let minHeatingTime=10*60*1000, maxTargetTemperature=24,
 	minTargetTemperature=16, minThresholdTemperature=0.5,
 	targetTemperature=20, targetHeatingCoolingState="HEAT",
 	heatingThresholdTemperature=0.5, coolingThresholdTemperature=1,
-	useExternalSensor=false, topicExternalSensor='shellyplusht-XXXXXXXXX/events/rpc';
+	useExternalSensor=false, topicExternalSensor='shellyplusht-XXXXXXXXXXXX/events/rpc';
 
 
 print("Starting Ferme de Pommerieux's ShellyPlus1 Thermostat Script");
@@ -283,4 +283,7 @@ if (!useExternalSensor) {
 });
 };
 
+
+// Now load a timer to launch the thermostat() and wait until the device is fully
+//connected to a MQTT broker,
 loadOnBootTimer_handle = Timer.set(loadOnBootTimer,true,thermostat);
