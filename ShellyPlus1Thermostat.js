@@ -207,14 +207,21 @@ MQTT.subscribe(topicThermostat + '/targetTemperature',
  function (topic, message) {
 	if (typeof message === "undefined") return;
 	message = JSON.parse(message);
-	if (targetTemperature === message ) return; 
+	if (typeof message !== "number") return;
+	if (targetTemperature === message ) return;
+	print("targetTemperature is now:",message, " instead of ",
+	 targetTemperature);
 	targetTemperature = message;
 	dataHasChanged=true;
 });
 MQTT.subscribe(topicThermostat + '/targetHeatingCoolingState',
  function (topic, message) {
 	if (typeof message === "undefined") return;
+	if (typeof message !== "string") return;
+	if ((message !== "HEAT")||("OFF")) return;
 	if (targetHeatingCoolingState === message ) return;
+	print("targetHeatingCoolingState is now:",message, " instead of ",
+	 targetHeatingCoolingState);
 	targetHeatingCoolingState = JSON.parse(message);
 	dataHasChanged=true;
 });
@@ -222,7 +229,10 @@ MQTT.subscribe(topicThermostat + '/heatingThresholdTemperature',
  function (topic, message) {
 	if (typeof message === "undefined") return;
 	message = JSON.parse(message);
+	if (typeof message !== "number") return;
 	if (heatingThresholdTemperature === message ) return;
+	print("heatingThresholdTemperature is now:",message, " instead of ",
+	 heatingThresholdTemperature);
 	heatingThresholdTemperature = message;
 	dataHasChanged=true;
 });
@@ -230,7 +240,10 @@ MQTT.subscribe(topicThermostat + '/coolingThresholdTemperature',
  function (topic, message) {
 	if (typeof message === "undefined") return;
 	message = JSON.parse(message);
+	if (typeof message !== "number") return;
 	if (coolingThresholdTemperature === message ) return;
+	print("coolingThresholdTemperature is now:", typeof message, " instead of ",
+	 coolingThresholdTemperature);
 	coolingThresholdTemperature = message;
 	dataHasChanged=true;
 });
