@@ -1,23 +1,23 @@
  // This script makes ShellyPlus1 act as an MQTT heat-only thermostat
  // it will read and publish the following MQTT topics
  /*
-          MQTT.publish(topicThermostat + '/targetTemperature',
-           JSON.stringify(targetTemperature), 0, false);
-          MQTT.publish(topicThermostat + '/targetHeatingCoolingState',
-           targetHeatingCoolingState, 0, false);
-          MQTT.publish(topicThermostat + '/heatingThresholdTemperature',
-           JSON.stringify(heatingThresholdTemperature), 0, false);
-          MQTT.publish(topicThermostat + '/coolingThresholdTemperature',
-           JSON.stringify(coolingThresholdTemperature), 0, false);
-          }
+            MQTT.publish(topicThermostat + '/targetTemperature',
+             JSON.stringify(targetTemperature), 0, false);
+            MQTT.publish(topicThermostat + '/targetHeatingCoolingState',
+             targetHeatingCoolingState, 0, false);
+            MQTT.publish(topicThermostat + '/heatingThresholdTemperature',
+             JSON.stringify(heatingThresholdTemperature), 0, false);
+            MQTT.publish(topicThermostat + '/coolingThresholdTemperature',
+             JSON.stringify(coolingThresholdTemperature), 0, false);
+            }
 
-          function publishCurrent() {
-          MQTT.publish(topicThermostat + '/currentHeatingCoolingState',
-           JSON.stringify(currentHeatingCoolingState), 0, false);
-          MQTT.publish(topicThermostat + '/currentTemperature',
-           JSON.stringify(currentTemperature) , 0, false);
-          }
-          */
+            function publishCurrent() {
+            MQTT.publish(topicThermostat + '/currentHeatingCoolingState',
+             JSON.stringify(currentHeatingCoolingState), 0, false);
+            MQTT.publish(topicThermostat + '/currentTemperature',
+             JSON.stringify(currentTemperature) , 0, false);
+            }
+            */
  // define config values, time are in ms and degree in celsius.
  let minHeatingTime = 10 * 60 * 1000,
  	targetTemperature = 20.5,
@@ -30,7 +30,7 @@
  	minDeltaHeatingTemperature = 0.5,
  	useExternalSensor = true,
  	topicExternalSensor = 'shellyplusht-c049ef8e1ddc/events/rpc';
- 	
+
  print("Starting Ferme de Pommerieux's ShellyPlus1 Thermostat Script");
  // detach the input : we don't need it
  Shelly.call("Switch.SetConfig", {
@@ -60,7 +60,7 @@
  	topicThermostat = Shelly.getDeviceInfo().id + '/thermostat',
  	KVS_KEY = 'thermostat';
  if (!useExternalSensor) topicExternalSensor = null;
- 
+
  // Define some functions
 
  function saveData() {
@@ -96,8 +96,9 @@
  				heatingThresholdTemperature = result.heatingThresholdTemperature;
  				coolingThresholdTemperature = result.coolingThresholdTemperature;
  				minHeatingTime = result.minHeatingTime,
-				deltaCoolingTemperature = targetTemperature - coolingThresholdTemperature;
-			 	deltaHeatingTemperature = heatingThresholdTemperature - targetTemperature;
+ 					deltaCoolingTemperature = targetTemperature -
+ 					coolingThresholdTemperature;
+ 				deltaHeatingTemperature = heatingThresholdTemperature - targetTemperature;
  				return;
  			}
  		}
@@ -123,7 +124,7 @@
  };
 
  function heatControl() {
- //	if (dataHasChanged) validateTargetData(); // to validate the target values
+ 	//	if (dataHasChanged) validateTargetData(); // to validate the target values
  	if (targetHeatingCoolingState === "HEAT") {
  		if ((currentTemperature < coolingThresholdTemperature) &&
  			(currentHeatingCoolingState !== "HEAT")) { // does nothing if already heating
@@ -180,7 +181,7 @@
  	Timer.clear(holdTimer_handle);
  	Timer.clear(loadOnBootTimer_handle);
  }
- 
+
  // create the thermostat function to load it in a timer
  function thermostat() {
  	//exit if no active MQTT connection or already running
@@ -197,7 +198,8 @@
  	//Lauch timers for MQTT publish, Data save and heatcontrol
  	// Note i could merge heatControl and publishTarget if i need another timer
  	if (publishTargetTimer !== heatControlTimer) {
- 		publishTargetTimer_handle = Timer.set(publishTargetTimer, true, publishTarget);
+ 		publishTargetTimer_handle = Timer.set(publishTargetTimer, true,
+ 			publishTarget);
  		heatControlTimer_handle = Timer.set(heatControlTimer, true, heatControl);
  	} else { // reducing timers usage
  		Timer.set(publishTargetTimer, true, function() {
@@ -215,7 +217,7 @@
  			message = JSON.parse(message);
  			if (typeof message !== "number") return;
  			if ((targetTemperature < message - 0.4) ||
- 				(targetTemperature > message + 0.4)) { 
+ 				(targetTemperature > message + 0.4)) {
  				print("Received new message from", topicThermostat +
  					'/targetTemperature:', JSON.stringify(message));
  				print("targetTemperature is now:", JSON.stringify(message),
@@ -223,21 +225,21 @@
  					JSON.stringify(targetTemperature));
  				if ((message - minDeltaCoolingTemperature < minAllowedTemperature) ||
  					(message - deltaCoolingTemperature < minAllowedTemperature)) {
- 					targetTemperature = minAllowedTemperature +	minDeltaCoolingTemperature;
+ 					targetTemperature = minAllowedTemperature + minDeltaCoolingTemperature;
  					coolingThresholdTemperature = minAllowedTemperature;
  					deltaCoolingTemperature = minDeltaCoolingTemperature;
- 				}
- 				else if ((message + minDeltaHeatingTemperature > maxAllowedTemperature) ||
+ 				} else if ((message + minDeltaHeatingTemperature > maxAllowedTemperature) ||
  					(message + deltaHeatingTemperature > maxAllowedTemperature)) {
- 					targetTemperature = maxAllowedTemperature -	minDeltaHeatingTemperature;
+ 					targetTemperature = maxAllowedTemperature - minDeltaHeatingTemperature;
  					heatingThresholdTemperature = maxAllowedTemperature;
  					deltaHeatingTemperature = minDeltaHeatingTemperature;
- 				}
- 				else {
+ 				} else {
  					targetTemperature = message;
-					coolingThresholdTemperature = targetTemperature - deltaCoolingTemperature;
-			 		heatingThresholdTemperature = targetTemperature + deltaHeatingTemperature;
-			 	}
+ 					coolingThresholdTemperature = targetTemperature -
+ 						deltaCoolingTemperature;
+ 					heatingThresholdTemperature = targetTemperature +
+ 						deltaHeatingTemperature;
+ 				}
  				dataHasChanged = true;
  			}
  		});
@@ -272,9 +274,9 @@
  				print("heatingThresholdTemperature is now:", JSON.stringify(
  						message),
  					" instead of ",
- 					JSON.stringify(targetTemperature));			
+ 					JSON.stringify(targetTemperature));
  				heatingThresholdTemperature = message;
- 			 	targetTemperature = heatingThresholdTemperature - deltaHeatingTemperature;
+ 				targetTemperature = heatingThresholdTemperature - deltaHeatingTemperature;
  				dataHasChanged = true;
  			}
  		});
@@ -295,7 +297,7 @@
  					" instead of ",
  					JSON.stringify(targetTemperature));
  				coolingThresholdTemperature = message;
- 			 	targetTemperature = coolingThresholdTemperature + deltacoolingTemperature;
+ 				targetTemperature = coolingThresholdTemperature + deltaCoolingTemperature;
  				dataHasChanged = true;
  			}
  		});
