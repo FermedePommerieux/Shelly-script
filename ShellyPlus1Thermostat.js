@@ -228,11 +228,15 @@
  					targetTemperature = minAllowedTemperature + minDeltaCoolingTemperature;
  					coolingThresholdTemperature = minAllowedTemperature;
  					deltaCoolingTemperature = minDeltaCoolingTemperature;
+ 					 heatingThresholdTemperature = targetTemperature +
+ 						deltaHeatingTemperature;
  				} else if ((message + minDeltaHeatingTemperature > maxAllowedTemperature) ||
  					(message + deltaHeatingTemperature > maxAllowedTemperature)) {
  					targetTemperature = maxAllowedTemperature - minDeltaHeatingTemperature;
  					heatingThresholdTemperature = maxAllowedTemperature;
  					deltaHeatingTemperature = minDeltaHeatingTemperature;
+ 					coolingThresholdTemperature = targetTemperature -
+ 						deltaCoolingTemperature;
  				} else {
  					targetTemperature = message;
  					coolingThresholdTemperature = targetTemperature -
