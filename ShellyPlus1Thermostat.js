@@ -1,29 +1,29 @@
  // This script makes ShellyPlus1 act as an MQTT heat-only thermostat
  // it will read and publish the following MQTT topics
  /*
-              MQTT.publish(topicThermostat + '/targetTemperature',
-               JSON.stringify(targetTemperature), 0, false);
-              MQTT.publish(topicThermostat + '/targetHeatingCoolingState',
-               targetHeatingCoolingState, 0, false);
-              MQTT.publish(topicThermostat + '/heatingThresholdTemperature',
-               JSON.stringify(heatingThresholdTemperature), 0, false);
-              MQTT.publish(topicThermostat + '/coolingThresholdTemperature',
-               JSON.stringify(coolingThresholdTemperature), 0, false);
-              }
+               MQTT.publish(topicThermostat + '/targetTemperature',
+                JSON.stringify(targetTemperature), 0, false);
+               MQTT.publish(topicThermostat + '/targetHeatingCoolingState',
+                targetHeatingCoolingState, 0, false);
+               MQTT.publish(topicThermostat + '/heatingThresholdTemperature',
+                JSON.stringify(heatingThresholdTemperature), 0, false);
+               MQTT.publish(topicThermostat + '/coolingThresholdTemperature',
+                JSON.stringify(coolingThresholdTemperature), 0, false);
+               }
 
-              function publishCurrent() {
-              MQTT.publish(topicThermostat + '/currentHeatingCoolingState',
-               JSON.stringify(currentHeatingCoolingState), 0, false);
-              MQTT.publish(topicThermostat + '/currentTemperature',
-               JSON.stringify(currentTemperature) , 0, false);
-              }
-              */
+               function publishCurrent() {
+               MQTT.publish(topicThermostat + '/currentHeatingCoolingState',
+                JSON.stringify(currentHeatingCoolingState), 0, false);
+               MQTT.publish(topicThermostat + '/currentTemperature',
+                JSON.stringify(currentTemperature) , 0, false);
+               }
+               */
  // define config values, time are in ms and degree in celsius.
  let minHeatingTime = 10 * 60 * 1000,
  	targetTemperature = 20.5,
  	targetHeatingCoolingState = "HEAT",
- 	heatingThresholdTemperature = 19,
- 	coolingThresholdTemperature = 21,
+ 	heatingThresholdTemperature = 21.5,
+ 	coolingThresholdTemperature = 19,
  	minAllowedTemperature = 16,
  	maxAllowedTemperature = 24,
  	minHysteresisCoolingTemperature = 1,
@@ -49,6 +49,8 @@
  	coolingThresholdTemperature,
  	hysteresisHeatingTemperature = heatingThresholdTemperature -
  	targetTemperature,
+ 	currentTemperatureCoefficient = null,
+ 	currentTemperatureTs = null,
  	isRunning = false,
  	dataHasChanged = true,
  	holdTimer = false,
@@ -277,11 +279,11 @@
  			if (typeof message !== "number") return;
  			if ((message < minAllowedTemperature) ||
  				(message > maxAllowedTemperature)) return;
-      		// avoid minor changes
+ 			// avoid minor changes
  			if ((heatingThresholdTemperature < message -
  					minHysteresisCoolingTemperature) ||
  				(heatingThresholdTemperature > message +
-                 	minHysteresisCoolingTemperature)
+ 					minHysteresisCoolingTemperature)
  			) {
  				print("Received new message from", topicThermostat +
  					'/heatingThresholdTemperature:', JSON.stringify(
@@ -326,10 +328,17 @@
  			if (typeof message.params === "undefined") return;
  			if (typeof message.params["temperature:0"] === "undefined")
  				return;
- 			currentTemperature = message.params["temperature:0"].tC;
+ 			if (typeof currentTemperatureTs === "number")
+ 				currentTemperatureCoefficient = (message.params[
+ 					"temperature:0"].tC - currentTemperature) /
+ 					(message.params.ts - currentTemperatureTs);
+ 			currentTemperatureTs = message.params.ts;
  			print(
  				"external temperature sensor has reported a currentTemperature :",
- 				currentTemperature);
+ 				currentTemperature,
+ 				" currentTemperatureCoefficient is:",
+ 				currentTemperatureCoefficient * 60,
+ 				"Degree Celsius/min");
  		});
  	}
  	// Subscribe to internal sensors
@@ -339,14 +348,24 @@
  			//report current temperature 
  			if (message.component === "temperature:0") {
  				if (typeof message.delta.tC !== "undefined") {
- 					currentTemperature = message.hysteresis.tC;
+ 			if (typeof currentTemperatureTs === "number")
+ 				currentTemperatureCoefficient = (message.delta.tC - currentTemperature) /
+ 					(message.params.ts - currentTemperatureTs);
+ 			currentTemperature = message.delta.tC;
+ 			currentTemperatureTs = message.params.ts;
+ 			print(
+ 				"internal temperature sensor has reported a currentTemperature :",
+ 				currentTemperature,
+ 				" currentTemperatureCoefficient is:",
+ 				currentTemperatureCoefficient * 60,
+ 				"Degree Celsius/min");
  				}
  			}
  		}
  		// report currentheatingCoolingState
  		if (message.component === "switch:0") {
  			if (typeof message.delta.output !== "undefined") {
- 				currentHeatingCoolingState = message.hysteresis.output ?
+ 				currentHeatingCoolingState = message.delta.output ?
  					"HEAT" : "OFF";
  				print("currentHeatingCoolingState is now:"
  					currentHeatingCoolingState);
