@@ -29,7 +29,8 @@
  	minDeltaCoolingTemperature = 1,
  	minDeltaHeatingTemperature = 0.5,
  	useExternalSensor = true,
- 	topicExternalSensor = 'shellyplusht-c049ef8e1ddc/events/rpc';
+ 	topicExternalSensor = 'shellyplusht-c049ef8e1ddc/events/rpc',
+ 	restoreData=true ; // set to false to use local declared target at startup
 
  print("Starting Ferme de Pommerieux's ShellyPlus1 Thermostat Script");
  // detach the input : we don't need it
@@ -96,9 +97,10 @@
  				heatingThresholdTemperature = result.heatingThresholdTemperature;
  				coolingThresholdTemperature = result.coolingThresholdTemperature;
  				minHeatingTime = result.minHeatingTime,
- 					deltaCoolingTemperature = targetTemperature -
+ 				deltaCoolingTemperature = targetTemperature -
  					coolingThresholdTemperature;
- 				deltaHeatingTemperature = heatingThresholdTemperature - targetTemperature;
+ 				deltaHeatingTemperature = heatingThresholdTemperature -
+ 					targetTemperature;
  				return;
  			}
  		}
@@ -161,10 +163,11 @@
  				}); // stop heater}
  			}
  		}
- 	} else if (currentHeatingCoolingState === "HEAT") {
+ 	} else if ((targetHeatingCoolingState === "OFF") && 
+ 		(currentHeatingCoolingState === "HEAT")) {
  		print("TargetHeatingCoolingState is set to OFF, stopping heater");
  		currentHeatingCoolingState = "OFF";
- 		Timer.clear(timer_handle);
+ 		Timer.clear(holdTimer_handle);
  		Shelly.call("Switch.Set", {
  			'id': 0,
  			'on': false
@@ -191,7 +194,7 @@
  	Timer.clear(loadOnBootTimer_handle);
  	print('Thermostat Running, LoadOnBootTimer cleared');
  	// restore previous datas
- 	getData();
+ 	if (restoreData) getData();
  	// publish the initial target and current values
  	publishTarget();
  	publishCurrent();
@@ -320,12 +323,10 @@
  	}
  	// Subscribe to internal sensors
  	Shelly.addStatusHandler(function(message) {
+ 	 	if (typeof message.component === "undefined") return;
  		if (!useExternalSensor) {
- 			if (typeof message.component === "undefined") return;
  			//report current temperature 
- 			if ((message.component === "temperature:0") && (
- 					useExternalSensor ===
- 					false)) {
+ 			if (message.component === "temperature:0") {
  				if (typeof message.delta.tC !== "undefined") {
  					currentTemperature = message.delta.tC;
  				}
@@ -333,9 +334,10 @@
  		}
  		// report currentheatingCoolingState
  		if (message.component === "switch:0") {
- 			if (typeof message.delta.state !== "undefined") {
- 				currentHeatingCoolingState = message.delta.state ?
+ 			if (typeof message.delta.output !== "undefined") {
+ 				currentHeatingCoolingState = message.delta.output ?
  					"HEAT" : "OFF";
+               print("currentHeatingCoolingState is now:"currentHeatingCoolingState);
  			}
  		}
  	});
