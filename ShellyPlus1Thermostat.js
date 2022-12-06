@@ -1,23 +1,23 @@
  // This script makes ShellyPlus1 act as an MQTT heat-only thermostat
  // it will read and publish the following MQTT topics
  /*
-             MQTT.publish(topicThermostat + '/targetTemperature',
-              JSON.stringify(targetTemperature), 0, false);
-             MQTT.publish(topicThermostat + '/targetHeatingCoolingState',
-              targetHeatingCoolingState, 0, false);
-             MQTT.publish(topicThermostat + '/heatingThresholdTemperature',
-              JSON.stringify(heatingThresholdTemperature), 0, false);
-             MQTT.publish(topicThermostat + '/coolingThresholdTemperature',
-              JSON.stringify(coolingThresholdTemperature), 0, false);
-             }
+              MQTT.publish(topicThermostat + '/targetTemperature',
+               JSON.stringify(targetTemperature), 0, false);
+              MQTT.publish(topicThermostat + '/targetHeatingCoolingState',
+               targetHeatingCoolingState, 0, false);
+              MQTT.publish(topicThermostat + '/heatingThresholdTemperature',
+               JSON.stringify(heatingThresholdTemperature), 0, false);
+              MQTT.publish(topicThermostat + '/coolingThresholdTemperature',
+               JSON.stringify(coolingThresholdTemperature), 0, false);
+              }
 
-             function publishCurrent() {
-             MQTT.publish(topicThermostat + '/currentHeatingCoolingState',
-              JSON.stringify(currentHeatingCoolingState), 0, false);
-             MQTT.publish(topicThermostat + '/currentTemperature',
-              JSON.stringify(currentTemperature) , 0, false);
-             }
-             */
+              function publishCurrent() {
+              MQTT.publish(topicThermostat + '/currentHeatingCoolingState',
+               JSON.stringify(currentHeatingCoolingState), 0, false);
+              MQTT.publish(topicThermostat + '/currentTemperature',
+               JSON.stringify(currentTemperature) , 0, false);
+              }
+              */
  // define config values, time are in ms and degree in celsius.
  let minHeatingTime = 10 * 60 * 1000,
  	targetTemperature = 20.5,
@@ -277,8 +277,12 @@
  			if (typeof message !== "number") return;
  			if ((message < minAllowedTemperature) ||
  				(message > maxAllowedTemperature)) return;
- 			if ((heatingThresholdTemperature < message - 0.4) ||
- 				(heatingThresholdTemperature > message + 0.4)) {
+      		// avoid minor changes
+ 			if ((heatingThresholdTemperature < message -
+ 					minHysteresisCoolingTemperature) ||
+ 				(heatingThresholdTemperature > message +
+                 	minHysteresisCoolingTemperature)
+ 			) {
  				print("Received new message from", topicThermostat +
  					'/heatingThresholdTemperature:', JSON.stringify(
  						message));
@@ -334,14 +338,14 @@
  		if (!useExternalSensor) {
  			//report current temperature 
  			if (message.component === "temperature:0") {
- 				if (typeof message.hysteresis.tC !== "undefined") {
+ 				if (typeof message.delta.tC !== "undefined") {
  					currentTemperature = message.hysteresis.tC;
  				}
  			}
  		}
  		// report currentheatingCoolingState
  		if (message.component === "switch:0") {
- 			if (typeof message.hysteresis.output !== "undefined") {
+ 			if (typeof message.delta.output !== "undefined") {
  				currentHeatingCoolingState = message.hysteresis.output ?
  					"HEAT" : "OFF";
  				print("currentHeatingCoolingState is now:"
