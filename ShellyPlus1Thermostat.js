@@ -1,23 +1,17 @@
  // This script makes ShellyPlus1 act as an MQTT heat-only thermostat
  // it will read and publish the following MQTT topics
  /*
-               MQTT.publish(topicThermostat + '/targetTemperature',
-                JSON.stringify(targetTemperature), 0, false);
-               MQTT.publish(topicThermostat + '/targetHeatingCoolingState',
-                targetHeatingCoolingState, 0, false);
-               MQTT.publish(topicThermostat + '/heatingThresholdTemperature',
-                JSON.stringify(heatingThresholdTemperature), 0, false);
-               MQTT.publish(topicThermostat + '/coolingThresholdTemperature',
-                JSON.stringify(coolingThresholdTemperature), 0, false);
-               }
-
-               function publishCurrent() {
-               MQTT.publish(topicThermostat + '/currentHeatingCoolingState',
-                JSON.stringify(currentHeatingCoolingState), 0, false);
-               MQTT.publish(topicThermostat + '/currentTemperature',
-                JSON.stringify(currentTemperature) , 0, false);
-               }
-               */
+"getCurrentHeatingCoolingState": "shellyplus1-XXXXXXXXXXXX/thermostat/currentHeatingCoolingState",
+"setTargetHeatingCoolingState": "topic": "shellyplus1-XXXXXXXXXXXX/thermostat/targetHeatingCoolingState",
+"getTargetHeatingCoolingState": "shellyplus1-XXXXXXXXXXXX/thermostat/targetHeatingCoolingState",
+"getCurrentTemperature": "shellyplus1-XXXXXXXXXXXX/thermostat/currentTemperature",
+"setTargetTemperature": "shellyplus1-XXXXXXXXXXXX/thermostat/targetTemperature",
+"getTargetTemperature": "shellyplus1-XXXXXXXXXXXX/thermostat/targetTemperature",
+"setCoolingThresholdTemperature": "shellyplus1-XXXXXXXXXXXX/thermostat/coolingThresholdTemperature"
+"getCoolingThresholdTemperature": "shellyplus1-XXXXXXXXXXXX/thermostat/coolingThresholdTemperature",
+"setHeatingThresholdTemperature": "shellyplus1-XXXXXXXXXXXX/thermostat/heatingThresholdTemperature"
+"getHeatingThresholdTemperature": "shellyplus1-XXXXXXXXXXXX/thermostat/heatingThresholdTemperature"
+*/
  // define config values, time are in ms and degree in celsius.
  let minHeatingTime = 10 * 60 * 1000,
  	targetTemperature = 20.5,
