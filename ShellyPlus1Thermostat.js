@@ -45,8 +45,10 @@
  	publishTargetTimer = 5 * 1000,
  	heatControlTimer = 5 * 1000,
  	saveDataTimer = 15 * 60 * 1000,
- 	deltaCoolingTemperature = targetTemperature - coolingThresholdTemperature,
- 	deltaHeatingTemperature = heatingThresholdTemperature - targetTemperature,
+ 	hysteresisCoolingTemperature = targetTemperature -
+ 	coolingThresholdTemperature,
+ 	hysteresisHeatingTemperature = heatingThresholdTemperature -
+ 	targetTemperature,
  	isRunning = false,
  	dataHasChanged = true,
  	holdTimer = false,
@@ -97,9 +99,9 @@
  				heatingThresholdTemperature = result.heatingThresholdTemperature;
  				coolingThresholdTemperature = result.coolingThresholdTemperature;
  				minHeatingTime = result.minHeatingTime,
- 					deltaCoolingTemperature = targetTemperature -
+ 					hysteresisCoolingTemperature = targetTemperature -
  					coolingThresholdTemperature;
- 				deltaHeatingTemperature = heatingThresholdTemperature -
+ 				hysteresisHeatingTemperature = heatingThresholdTemperature -
  					targetTemperature;
  				return;
  			}
@@ -227,28 +229,28 @@
  					" instead of ",
  					JSON.stringify(targetTemperature));
  				if ((message - minHysteresisCoolingTemperature < minAllowedTemperature) ||
- 					(message - deltaCoolingTemperature < minAllowedTemperature)) {
+ 					(message - hysteresisCoolingTemperature < minAllowedTemperature)) {
  					targetTemperature = minAllowedTemperature +
  						minHysteresisCoolingTemperature;
  					coolingThresholdTemperature = minAllowedTemperature;
- 					deltaCoolingTemperature = minHysteresisCoolingTemperature;
+ 					hysteresisCoolingTemperature = minHysteresisCoolingTemperature;
  					heatingThresholdTemperature = targetTemperature +
- 						deltaHeatingTemperature;
+ 						hysteresisHeatingTemperature;
  				} else if ((message + minHysteresisHeatingTemperature >
  						maxAllowedTemperature) ||
- 					(message + deltaHeatingTemperature > maxAllowedTemperature)) {
+ 					(message + hysteresisHeatingTemperature > maxAllowedTemperature)) {
  					targetTemperature = maxAllowedTemperature -
  						minHysteresisHeatingTemperature;
  					heatingThresholdTemperature = maxAllowedTemperature;
- 					deltaHeatingTemperature = minHysteresisHeatingTemperature;
+ 					hysteresisHeatingTemperature = minHysteresisHeatingTemperature;
  					coolingThresholdTemperature = targetTemperature -
- 						deltaCoolingTemperature;
+ 						hysteresisCoolingTemperature;
  				} else {
  					targetTemperature = message;
  					coolingThresholdTemperature = targetTemperature -
- 						deltaCoolingTemperature;
+ 						hysteresisCoolingTemperature;
  					heatingThresholdTemperature = targetTemperature +
- 						deltaHeatingTemperature;
+ 						hysteresisHeatingTemperature;
  				}
  				dataHasChanged = true;
  			}
@@ -285,7 +287,8 @@
  					" instead of ",
  					JSON.stringify(targetTemperature));
  				heatingThresholdTemperature = message;
- 				targetTemperature = heatingThresholdTemperature - deltaHeatingTemperature;
+ 				targetTemperature = heatingThresholdTemperature -
+ 					hysteresisHeatingTemperature;
  				dataHasChanged = true;
  			}
  		});
@@ -306,7 +309,8 @@
  					" instead of ",
  					JSON.stringify(targetTemperature));
  				coolingThresholdTemperature = message;
- 				targetTemperature = coolingThresholdTemperature + deltaCoolingTemperature;
+ 				targetTemperature = coolingThresholdTemperature +
+ 					hysteresisCoolingTemperature;
  				dataHasChanged = true;
  			}
  		});
@@ -330,15 +334,15 @@
  		if (!useExternalSensor) {
  			//report current temperature 
  			if (message.component === "temperature:0") {
- 				if (typeof message.delta.tC !== "undefined") {
- 					currentTemperature = message.delta.tC;
+ 				if (typeof message.hysteresis.tC !== "undefined") {
+ 					currentTemperature = message.hysteresis.tC;
  				}
  			}
  		}
  		// report currentheatingCoolingState
  		if (message.component === "switch:0") {
- 			if (typeof message.delta.output !== "undefined") {
- 				currentHeatingCoolingState = message.delta.output ?
+ 			if (typeof message.hysteresis.output !== "undefined") {
+ 				currentHeatingCoolingState = message.hysteresis.output ?
  					"HEAT" : "OFF";
  				print("currentHeatingCoolingState is now:"
  					currentHeatingCoolingState);
@@ -347,309 +351,4 @@
  	});
  };
  // Start thermostat() in a Timer, to wait until the device is fully ready
- loadOnBootTimer_handle = Timer.set(loadOnBootTimer, true, thermostat);
- let minHeatingTime = 10 * 60 * 1000,
- 	targetTemperature = 20.5,
- 	targetHeatingCoolingState = "HEAT",
- 	heatingThresholdTemperature = 19,
- 	coolingThresholdTemperature = 21,
- 	minAllowedTemperature = 16,
- 	maxAllowedTemperature = 24,
- 	minDeltaCoolingTemperature = 1,
- 	minDeltaHeatingTemperature = 0.5,
- 	useExternalSensor = true,
- 	topicExternalSensor = 'shellyplusht-c049ef8e1ddc/events/rpc',
- 	restoreData = true;
-
- print("Starting Ferme de Pommerieux's ShellyPlus1 Thermostat Script");
- Shelly.call("Switch.SetConfig", {
- 	id: 0,
- 	config: {
- 		in_mode: "detached",
- 	},
- });
- let loadOnBootTimer = 15 * 1000,
- 	publishTargetTimer = 5 * 1000,
- 	heatControlTimer = 5 * 1000,
- 	saveDataTimer = 15 * 60 * 1000,
- 	deltaCoolingTemperature = targetTemperature - coolingThresholdTemperature,
- 	deltaHeatingTemperature = heatingThresholdTemperature - targetTemperature,
- 	isRunning = false,
- 	dataHasChanged = true,
- 	holdTimer = false,
- 	controlTimer_handle = null,
- 	publishTargetTimer_handle = null,
- 	saveDataTimer_handle = null,
- 	holdTimer_handle = null,
- 	loadOnBootTimer_handle = null,
- 	currentTemperature = targetTemperature,
- 	currentHeatingCoolingState = Shelly.getComponentStatus('switch:0').output ?
- 	"HEAT" : "OFF",
- 	topicThermostat = Shelly.getDeviceInfo().id + '/thermostat',
- 	KVS_KEY = 'thermostat';
- if (!useExternalSensor) topicExternalSensor = null;
-
-
- function saveData() {
- 	if (!dataHasChanged) return;
- 	print("Saving target Data to KVS", KVS_KEY);
- 	Shelly.call("KVS.Set", {
- 		key: KVS_KEY,
- 		value: {
- 			'targetTemperature': targetTemperature,
- 			'targetHeatingCoolingState': targetHeatingCoolingState,
- 			'heatingThresholdTemperature': heatingThresholdTemperature,
- 			'coolingThresholdTemperature': coolingThresholdTemperature,
- 			'minHeatingTime': minHeatingTime,
- 		}
- 	});
- 	dataHasChanged = false;
- };
-
- function getData() {
- 	print("Reading from ", KVS_KEY);
- 	Shelly.call(
- 		"KVS.Get", {
- 			key: KVS_KEY,
- 		},
- 		function(result, error_code, error_message) {
- 			print("Read from KVS", JSON.stringify(error_code));
- 			if (error_code === 0) {
- 				print("Restored target settings :", JSON.stringify(result.value));
- 				result = result.value;
- 				targetTemperature = result.targetTemperature;
- 				targetHeatingCoolingState = result.targetHeatingCoolingState;
- 				heatingThresholdTemperature = result.heatingThresholdTemperature;
- 				coolingThresholdTemperature = result.coolingThresholdTemperature;
- 				minHeatingTime = result.minHeatingTime,
- 					deltaCoolingTemperature = targetTemperature -
- 					coolingThresholdTemperature;
- 				deltaHeatingTemperature = heatingThresholdTemperature -
- 					targetTemperature;
- 				return;
- 			}
- 		}
- 	);
- };
-
- function publishTarget() {
- 	MQTT.publish(topicThermostat + '/targetTemperature',
- 		JSON.stringify(targetTemperature), 0, false);
- 	MQTT.publish(topicThermostat + '/targetHeatingCoolingState',
- 		targetHeatingCoolingState, 0, false);
- 	MQTT.publish(topicThermostat + '/heatingThresholdTemperature',
- 		JSON.stringify(heatingThresholdTemperature), 0, false);
- 	MQTT.publish(topicThermostat + '/coolingThresholdTemperature',
- 		JSON.stringify(coolingThresholdTemperature), 0, false);
- };
-
- function publishCurrent() {
- 	MQTT.publish(topicThermostat + '/currentHeatingCoolingState',
- 		currentHeatingCoolingState, 0, false);
- 	MQTT.publish(topicThermostat + '/currentTemperature',
- 		JSON.stringify(currentTemperature), 0, false);
- };
-
- function heatControl() {
- 	if (targetHeatingCoolingState === "HEAT") {
- 		if ((currentTemperature < coolingThresholdTemperature) &&
- 			(currentHeatingCoolingState !== "HEAT")) {
- 			print("CurrentTemperature", currentTemperature, " is lower than ",
- 				coolingThresholdTemperature,
- 				", starting heater");
- 			currentHeatingCoolingState = "HEAT";
- 			Shelly.call("Switch.Set", {
- 				'id': 0,
- 				'on': true
- 			});
- 			if (!holdTimer) {
- 				holdTimer = true;
- 				print("Starting timer for", minHeatingTime, "ms");
- 				holdTimer_handle = Timer.set(minHeatingTime, true, function() {
- 					print("Timer resumed");
- 					holdTimer = false;
- 				});
- 			}
- 		} else if ((currentTemperature > heatingThresholdTemperature) &&
- 			(currentHeatingCoolingState === "HEAT")) {
- 			print("CurrentTemperature", currentTemperature, " is higher than",
- 				heatingThresholdTemperature,
- 				", stoping heater");
- 			if ((holdTimer) && (currentTemperature < maxAllowedTemperature)) {
- 				print("minHeatTime not reached, waiting until timer resumes");
- 			} else {
- 				currentHeatingCoolingState = "OFF";
- 				Timer.clear(holdTimer_handle);
- 				Shelly.call("Switch.Set", {
- 					'id': 0,
- 					'on': false
- 				});
- 			}
- 		}
- 	} else if ((targetHeatingCoolingState === "OFF") &&
- 		(currentHeatingCoolingState === "HEAT")) {
- 		print("TargetHeatingCoolingState is set to OFF, stopping heater");
- 		currentHeatingCoolingState = "OFF";
- 		Timer.clear(holdTimer_handle);
- 		Shelly.call("Switch.Set", {
- 			'id': 0,
- 			'on': false
- 		});
- 	}
- 	publishCurrent();
- };
-
- function cleanTimers() {
- 	print("Clearing all timers...");
- 	Timer.clear(controlTimer_handle);
- 	Timer.clear(publishTargetTimer_handle);
- 	Timer.clear(saveDataTimer_handle);
- 	Timer.clear(holdTimer_handle);
- 	Timer.clear(loadOnBootTimer_handle);
- }
-
- function thermostat() {
- 	if ((!MQTT.isConnected()) || (isRunning)) return;
- 	isRunning = true;
- 	Timer.clear(loadOnBootTimer_handle);
- 	print('Thermostat Running, LoadOnBootTimer cleared');
- 	if (restoreData) getData();
- 	publishTarget();
- 	publishCurrent();
- 	if (publishTargetTimer !== heatControlTimer) {
- 		publishTargetTimer_handle = Timer.set(publishTargetTimer, true,
- 			publishTarget);
- 		heatControlTimer_handle = Timer.set(heatControlTimer, true, heatControl);
- 	} else {
- 		Timer.set(publishTargetTimer, true, function() {
- 			publishTarget();
- 			heatControl();
- 		});
- 	}
- 	Timer.set(saveDataTimer, true, saveData);
- 	MQTT.subscribe(topicThermostat + '/targetTemperature',
- 		function(topic, message) {
- 			if (typeof message === "undefined") return;
- 			message = JSON.parse(message);
- 			if (typeof message !== "number") return;
- 			if ((targetTemperature < message - 0.4) ||
- 				(targetTemperature > message + 0.4)) {
- 				print("Received new message from", topicThermostat +
- 					'/targetTemperature:', JSON.stringify(message));
- 				print("targetTemperature is now:", JSON.stringify(message),
- 					" instead of ",
- 					JSON.stringify(targetTemperature));
- 				if ((message - minDeltaCoolingTemperature < minAllowedTemperature) ||
- 					(message - deltaCoolingTemperature < minAllowedTemperature)) {
- 					targetTemperature = minAllowedTemperature + minDeltaCoolingTemperature;
- 					coolingThresholdTemperature = minAllowedTemperature;
- 					deltaCoolingTemperature = minDeltaCoolingTemperature;
- 					heatingThresholdTemperature = targetTemperature +
- 						deltaHeatingTemperature;
- 				} else if ((message + minDeltaHeatingTemperature > maxAllowedTemperature) ||
- 					(message + deltaHeatingTemperature > maxAllowedTemperature)) {
- 					targetTemperature = maxAllowedTemperature - minDeltaHeatingTemperature;
- 					heatingThresholdTemperature = maxAllowedTemperature;
- 					deltaHeatingTemperature = minDeltaHeatingTemperature;
- 					coolingThresholdTemperature = targetTemperature -
- 						deltaCoolingTemperature;
- 				} else {
- 					targetTemperature = message;
- 					coolingThresholdTemperature = targetTemperature -
- 						deltaCoolingTemperature;
- 					heatingThresholdTemperature = targetTemperature +
- 						deltaHeatingTemperature;
- 				}
- 				dataHasChanged = true;
- 			}
- 		});
- 	MQTT.subscribe(topicThermostat + '/targetHeatingCoolingState',
- 		function(topic, message) {
- 			if (typeof message === "undefined") return;
- 			if (typeof message !== "string") return;
- 			if (targetHeatingCoolingState === message) return;
- 			print("Received new message from", topicThermostat +
- 				'/targetHeatingCoolingState:', message
- 			);
- 			print("targetHeatingCoolingState is now:",
- 				message,
- 				" instead of ",
- 				targetHeatingCoolingState);
- 			targetHeatingCoolingState = message;
- 			dataHasChanged = true;
- 		});
- 	MQTT.subscribe(topicThermostat + '/heatingThresholdTemperature',
- 		function(topic, message) {
- 			if (typeof message === "undefined") return;
- 			message = JSON.parse(message);
- 			if (typeof message !== "number") return;
- 			if ((message < minAllowedTemperature) ||
- 				(message > maxAllowedTemperature)) return;
- 			if ((heatingThresholdTemperature < message - 0.4) ||
- 				(heatingThresholdTemperature > message + 0.4)) {
- 				print("Received new message from", topicThermostat +
- 					'/heatingThresholdTemperature:', JSON.stringify(
- 						message));
- 				print("heatingThresholdTemperature is now:", JSON.stringify(
- 						message),
- 					" instead of ",
- 					JSON.stringify(targetTemperature));
- 				heatingThresholdTemperature = message;
- 				targetTemperature = heatingThresholdTemperature - deltaHeatingTemperature;
- 				dataHasChanged = true;
- 			}
- 		});
- 	MQTT.subscribe(topicThermostat + '/coolingThresholdTemperature',
- 		function(topic, message) {
- 			if (typeof message === "undefined") return;
- 			message = JSON.parse(message);
- 			if (typeof message !== "number") return;
- 			if ((message < minAllowedTemperature) ||
- 				(message > maxAllowedTemperature)) return;
- 			if ((coolingThresholdTemperature < message - 0.4) ||
- 				(coolingThresholdTemperature > message + 0.4)) {
- 				print("Received new message from", topicThermostat +
- 					'/coolingThresholdTemperature:', JSON.stringify(
- 						message));
- 				print("coolingThresholdTemperature is now:", JSON.stringify(
- 						message),
- 					" instead of ",
- 					JSON.stringify(targetTemperature));
- 				coolingThresholdTemperature = message;
- 				targetTemperature = coolingThresholdTemperature + deltaCoolingTemperature;
- 				dataHasChanged = true;
- 			}
- 		});
- 	if (useExternalSensor) {
- 		print("External Temperature Sensor enable")
- 		MQTT.subscribe(topicExternalSensor, function(topic, message) {
- 			message = JSON.parse(message);
- 			if (typeof message.params === "undefined") return;
- 			if (typeof message.params["temperature:0"] === "undefined")
- 				return;
- 			currentTemperature = message.params["temperature:0"].tC;
- 			print(
- 				"external temperature sensor has reported a currentTemperature :",
- 				currentTemperature);
- 		});
- 	}
- 	Shelly.addStatusHandler(function(message) {
- 		if (typeof message.component === "undefined") return;
- 		if (!useExternalSensor) {
- 			if (message.component === "temperature:0") {
- 				if (typeof message.delta.tC !== "undefined") {
- 					currentTemperature = message.delta.tC;
- 				}
- 			}
- 		}
- 		if (message.component === "switch:0") {
- 			if (typeof message.delta.output !== "undefined") {
- 				currentHeatingCoolingState = message.delta.output ?
- 					"HEAT" : "OFF";
- 				print("currentHeatingCoolingState is now:"
- 					currentHeatingCoolingState);
- 			}
- 		}
- 	});
- };
  loadOnBootTimer_handle = Timer.set(loadOnBootTimer, true, thermostat);
