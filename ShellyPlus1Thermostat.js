@@ -246,7 +246,8 @@
  // create the thermostat function to load it in a timer
  function thermostat() {
  	//exit if no active MQTT connection or already running
- 	if ((!MQTT.isConnected()) && (isRunning)) {
+ 	if (!MQTT.isConnected()) return;
+    if (isRunning) {
  		Timer.clear(loadOnBootTimer_handle);
  		print('Thermostat Running, LoadOnBootTimer cleared');
  		return;
