@@ -31,7 +31,7 @@
  	topicExternalSensor = 'shellyplusht-c049ef8e1ddc/events/rpc',
  	restoreData = true, // set to false to use local declared target at startup
  	enableEve = false // Enable Eve topics heating/coolingThreshold
- enablePredict = true; // try to predict time remaining until start/stop
+ 	enablePredict = true; // try to predict time remaining until start/stop
 
  print("Starting Ferme de Pommerieux's ShellyPlus1 Thermostat Script");
  // detach the input : we don't need it
@@ -132,7 +132,7 @@
  		currentHeatingCoolingState, 0, false);
  	MQTT.publish(topicThermostat + '/currentTemperature',
  		JSON.stringify(currentTemperature), 0, false);
- 	if (enableEstimate) {
+ 	if (enablePredict) {
  		MQTT.publish(topicThermostat + '/dTdt',
  			JSON.stringify(dTdt), 0, false);
  		if (targetHeatingCoolingState === "HEAT") {
@@ -397,7 +397,7 @@
  			print(
  				"external temperature sensor has reported a currentTemperature :",
  				currentTemperature);
- 			if (enableEstimate) predict();
+ 			if (enablePredict) predict();
  		});
  	}
  	// Subscribe to internal sensors
@@ -412,7 +412,7 @@
  					print(
  						"internal temperature sensor has reported a currentTemperature :",
  						currentTemperature);
- 					if (enableEstimate) predict();
+ 					if (enablePredict) predict();
  				}
  			}
  		}
