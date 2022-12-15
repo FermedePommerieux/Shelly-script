@@ -2,20 +2,24 @@
  // it will read and publish the following MQTT topics
  /*
   	"getCurrentHeatingCoolingState": "shellyplus1-XXXXXXXXXXXX/thermostat/currentHeatingCoolingState",
-  	"setTargetHeatingCoolingState": "topic": "shellyplus1-XXXXXXXXXXXX/thermostat/targetHeatingCoolingState",
+  	"setTargetHeatingCoolingState": "shellyplus1-XXXXXXXXXXXX/thermostat/targetHeatingCoolingState",
   	"getTargetHeatingCoolingState": "shellyplus1-XXXXXXXXXXXX/thermostat/targetHeatingCoolingState",
   	"getCurrentTemperature": "shellyplus1-XXXXXXXXXXXX/thermostat/currentTemperature",
   	"setTargetTemperature": "shellyplus1-XXXXXXXXXXXX/thermostat/targetTemperature",
   	"getTargetTemperature": "shellyplus1-XXXXXXXXXXXX/thermostat/targetTemperature",
- Eve	"setCoolingThresholdTemperature": "shellyplus1-XXXXXXXXXXXX/thermostat/coolingThresholdTemperature"
- Eve	"getCoolingThresholdTemperature": "shellyplus1-XXXXXXXXXXXX/thermostat/coolingThresholdTemperature",
- Eve	"setHeatingThresholdTemperature": "shellyplus1-XXXXXXXXXXXX/thermostat/heatingThresholdTemperature"
- Eve	"getHeatingThresholdTemperature": "shellyplus1-XXXXXXXXXXXX/thermostat/heatingThresholdTemperature"
+  	
+ Opt	"setCoolingThresholdTemperature": "shellyplus1-XXXXXXXXXXXX/thermostat/coolingThresholdTemperature"
+ Opt	"getCoolingThresholdTemperature": "shellyplus1-XXXXXXXXXXXX/thermostat/coolingThresholdTemperature",
+ Opt	"setHeatingThresholdTemperature": "shellyplus1-XXXXXXXXXXXX/thermostat/heatingThresholdTemperature"
+ Opt	"getHeatingThresholdTemperature": "shellyplus1-XXXXXXXXXXXX/thermostat/ingThresholdTemperature"
+ Opt	"getHeatingThresholdTemperature": "shellyplus1-XXXXXXXXXXXX/thermostat/hysteresisCoolingTemperature"
+ Opt	"getHeatingThresholdTemperature": "shellyplus1-XXXXXXXXXXXX/thermostat/hysteresisHeatingTemperature"
+
  Opt	"getHeatingThresholdTemperature": "shellyplus1-XXXXXXXXXXXX/thermostat/willStart" in s
  Opt	"getHeatingThresholdTemperature": "shellyplus1-XXXXXXXXXXXX/thermostat/willStop" in s
  Opt	"getHeatingThresholdTemperature": "shellyplus1-XXXXXXXXXXXX/thermostat/dTdt" means instant deltaTemp/deltatime 
      */
- // Do not enableEve if you don't use it, otherwise it will mess your thermostat
+ // Do not use extra topic in homebridge if you don't use it, otherwise it will mess your thermostat
  // Start/Stop time prediction could be enable for test only 
  // define config values, time are in ms and degree in celsius.
  let minHeatingTime = 10 * 60 * 1000,
@@ -25,12 +29,11 @@
  	coolingThresholdTemperature = 19,
  	minAllowedTemperature = 16,
  	maxAllowedTemperature = 24,
- 	minHysteresisCoolingTemperature = 1,
- 	minHysteresisHeatingTemperature = 0.5,
+ 	minHysteresisHeatingCoolingTemperature = 0.5,
  	useExternalSensor = true,
  	topicExternalSensor = 'shellyplusht-c049ef8e1ddc/events/rpc',
  	restoreData = true, // set to false to use local declared target at startup
- 	enableEve = false // Enable Eve topics heating/coolingThreshold
+ 	enableExtra = true // Enable Eve topics heating/coolingThreshold
  	enablePredict = true; // try to predict time remaining until start/stop
 
  print("Starting Ferme de Pommerieux's ShellyPlus1 Thermostat Script");
@@ -125,7 +128,11 @@
  		JSON.stringify(heatingThresholdTemperature), 0, false);
  	MQTT.publish(topicThermostat + '/coolingThresholdTemperature',
  		JSON.stringify(coolingThresholdTemperature), 0, false);
- };
+ 	MQTT.publish(topicThermostat + '/hysteresisCoolingTemperature',
+ 		JSON.stringify(hysteresisCoolingTemperature), 0, false);
+ 	MQTT.publish(topicThermostat + '/hysteresisHeatingTemperature',
+ 		JSON.stringify(hysteresisHeatingTemperature), 0, false);
+};
 
  function publishCurrent() {
  	MQTT.publish(topicThermostat + '/currentHeatingCoolingState',
@@ -246,8 +253,7 @@
  // create the thermostat function to load it in a timer
  function thermostat() {
  	//exit if no active MQTT connection or already running
- 	if (!MQTT.isConnected()) return;
-    if (isRunning) {
+ 	if ((!MQTT.isConnected()) && (isRunning)) {
  		Timer.clear(loadOnBootTimer_handle);
  		print('Thermostat Running, LoadOnBootTimer cleared');
  		return;
@@ -266,7 +272,7 @@
  			publishTarget);
  		heatControlTimer_handle = Timer.set(heatControlTimer, true, heatControl);
  	} else { // reducing timers usage
- 		Timer.set(publishTargetTimer, true, function() {
+ 		heatControlTimer_handle = Timer.set(publishTargetTimer, true, function() {
  			publishTarget();
  			heatControl();
  		});
@@ -274,28 +280,28 @@
  	Timer.set(saveDataTimer, true, saveData);
  	// Subscribe to target datas:
  	//Note, to avoid continious majoration of values due to approximation of JSON.parse()
- 	// i reject minor change less than minHysteresisCoolingTemperature
+ 	// i reject minor change less than minHysteresisHeatingCoolingTemperature
  	MQTT.subscribe(topicThermostat + '/targetTemperature',
  		function(topic, message) {
  			if (typeof message === "undefined") return;
  			message = JSON.parse(message);
  			if (typeof message !== "number") return;
  			if ((targetTemperature < message -
- 					minHysteresisCoolingTemperature) ||
+ 					minHysteresisHeatingCoolingTemperature) ||
  				(targetTemperature > message +
- 					minHysteresisCoolingTemperature)
+ 					minHysteresisHeatingCoolingTemperature)
  			) {
  				print("Received new message from", topicThermostat +
  					'/targetTemperature:', JSON.stringify(message));
  				print("targetTemperature is now:", JSON.stringify(message),
  					" instead of ",
  					JSON.stringify(targetTemperature));
- 				if ((message - minHysteresisCoolingTemperature < minAllowedTemperature) ||
+ 				if ((message - minHysteresisHeatingCoolingTemperature < minAllowedTemperature) ||
  					(message - hysteresisCoolingTemperature < minAllowedTemperature)) {
  					targetTemperature = minAllowedTemperature +
- 						minHysteresisCoolingTemperature;
+ 						minHysteresisHeatingCoolingTemperature;
  					coolingThresholdTemperature = minAllowedTemperature;
- 					hysteresisCoolingTemperature = minHysteresisCoolingTemperature;
+ 					hysteresisCoolingTemperature = minHysteresisHeatingCoolingTemperature;
  					heatingThresholdTemperature = targetTemperature +
  						hysteresisHeatingTemperature;
  				} else if ((message + minHysteresisHeatingTemperature >
@@ -332,19 +338,21 @@
  			targetHeatingCoolingState = message;
  			dataHasChanged = true;
  		});
- 	if (enableEve) {
+ 	if (enableExtra) {
  		MQTT.subscribe(topicThermostat + '/heatingThresholdTemperature',
  			function(topic, message) {
  				if (typeof message === "undefined") return;
  				message = JSON.parse(message);
  				if (typeof message !== "number") return;
  				if ((message < minAllowedTemperature) ||
- 					(message > maxAllowedTemperature)) return;
+ 					(message > maxAllowedTemperature) ||
+ 					(message < targetTemperature - minHysteresisHeatingCoolingTemperature)
+ 					) return;
  				// avoid minor changes
  				if ((heatingThresholdTemperature < message -
- 						minHysteresisCoolingTemperature) ||
+ 						minHysteresisHeatingCoolingTemperature) ||
  					(heatingThresholdTemperature > message +
- 						minHysteresisCoolingTemperature)
+ 						minHysteresisHeatingCoolingTemperature)
  				) {
  					print("Received new message from", topicThermostat +
  						'/heatingThresholdTemperature:', JSON.stringify(
@@ -352,10 +360,10 @@
  					print("heatingThresholdTemperature is now:", JSON.stringify(
  							message),
  						" instead of ",
- 						JSON.stringify(targetTemperature));
+ 						JSON.stringify(heatingThresholdTemperature));
  					heatingThresholdTemperature = message;
- 					targetTemperature = heatingThresholdTemperature -
- 						hysteresisHeatingTemperature;
+ 					hysteresisHeatingTemperature  = heatingThresholdTemperature -
+ 						targetTemperature;
  					dataHasChanged = true;
  				}
  			});
@@ -365,11 +373,13 @@
  				message = JSON.parse(message);
  				if (typeof message !== "number") return;
  				if ((message < minAllowedTemperature) ||
- 					(message > maxAllowedTemperature)) return;
- 				if ((coolingThresholdTemperature < message -
- 						minHysteresisCoolingTemperature) ||
+ 					(message > maxAllowedTemperature) ||
+ 					(message > targetTemperature - minHysteresisHeatingCoolingTemperature)
+ 					) return;
+ 				if ((coolingThresholdTemperature < message - 
+ 						minHysteresisHeatingCoolingTemperature) ||
  					(coolingThresholdTemperature > message +
- 						minHysteresisCoolingTemperature)
+ 						minHysteresisHeatingCoolingTemperature)
  				) {
  					print("Received new message from", topicThermostat +
  						'/coolingThresholdTemperature:', JSON.stringify(
@@ -377,13 +387,68 @@
  					print("coolingThresholdTemperature is now:", JSON.stringify(
  							message),
  						" instead of ",
- 						JSON.stringify(targetTemperature));
+ 						JSON.stringify(coolingThresholdTemperature));
  					coolingThresholdTemperature = message;
- 					targetTemperature = coolingThresholdTemperature +
+ 					hysteresisCoolingTemperature = targetTemperature -
+ 						coolingThresholdTemperature;
+ 					dataHasChanged = true;
+ 				}
+ 			}
+ 		);	
+ 		MQTT.subscribe(topicThermostat + '/hysteresisCoolingTemperature',
+ 			function(topic, message) {
+ 				if (typeof message === "undefined") return;
+ 				message = JSON.parse(message);
+ 				if (typeof message !== "number") return;
+ 				if ((message < minHysteresisHeatingCoolingTemperature) ||
+ 					(message > targetTemperature - minAllowedTemperature)) return;
+ 				if ((hysteresisCoolingTemperature < message - 
+ 						minHysteresisHeatingCoolingTemperature) ||
+ 					(hysteresisCoolingTemperature > message +
+ 						minHysteresisHeatingCoolingTemperature)
+ 				) {
+ 					print("Received new message from", topicThermostat +
+ 						'/hysteresisCoolingTemperature:', JSON.stringify(
+ 							message));
+ 					print("hysteresisCoolingTemperature is now:", JSON.stringify(
+ 							message),
+ 						" instead of ",
+ 						JSON.stringify(hysteresisCoolingTemperature));
+ 					hysteresisCoolingTemperature = message;
+ 					coolingThresholdTemperature = targetTemperature -
  						hysteresisCoolingTemperature;
  					dataHasChanged = true;
  				}
+ 			}
+ 		);
+ 		MQTT.subscribe(topicThermostat + '/hysteresisHeatingTemperature',
+ 			function(topic, message) {
+ 				if (typeof message === "undefined") return;
+ 				message = JSON.parse(message);
+ 				if (typeof message !== "number") return;
+ 				if ((message < minHysteresisHeatingCoolingTemperature) ||
+ 					(message > maxAllowedTemperature - targetTemperature)) return;
+ 				if ((hysteresisHeatingTemperature < message - 
+ 						minHysteresisHeatingCoolingTemperature) ||
+ 					(hysteresisHeatingTemperature > message +
+ 						minHysteresisHeatingCoolingTemperature)
+ 				) {
+ 					print("Received new message from", topicThermostat +
+ 						'/hysteresisHeatingTemperature:', JSON.stringify(
+ 							message));
+ 					print("hysteresisHeatingTemperature is now:", JSON.stringify(
+ 							message),
+ 						" instead of ",
+ 						JSON.stringify(hysteresisHeatingTemperature));
+ 					hysteresisHeatingTemperature = message;
+ 					coolingThresholdTemperature = targetTemperature -
+ 						hysteresisHeatingTemperature;
+ 					dataHasChanged = true;
+ 				}
  			});
+ 
+ 		
+ 			
  	}
  	//Subscribe to an external Sensor if needed
  	if (useExternalSensor) {
@@ -429,5 +494,4 @@
  	});
  };
  // Start thermostat() in a Timer, to wait until the device is fully ready
- thermostat();
  loadOnBootTimer_handle = Timer.set(loadOnBootTimer, true, thermostat);
