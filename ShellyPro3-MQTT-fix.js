@@ -20,7 +20,7 @@
  		if ((timerHold) && (e.delta.source = "MQTT")) {
  			Shelly.call("Switch.set", { 'id': 2, 'on': switchState });
  			Timer.clear(timer_handle);
-    timerHold=false;
+ 			timerHold=false;
  		}
  	}
 });
