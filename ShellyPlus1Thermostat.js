@@ -22,7 +22,7 @@
  // Do not use extra topic in homebridge if you don't use it, otherwise it will mess your thermostat
  // Start/Stop time prediction could be enable for test only 
  // define config values, time are in ms and degree in celsius.
- let minHeatingTime = 10 * 60 * 1000,
+ let minHeatingTime = 15 * 60 * 1000,
  	targetTemperature = 20.5,
  	targetHeatingCoolingState = "HEAT",
  	heatingThresholdTemperature = 21.5,
@@ -34,7 +34,7 @@
  	topicExternalSensor = 'shellyplusht-c049ef8e1ddc/events/rpc',
  	restoreData = true, // set to false to use local declared target at startup
  	enableExtra = true // Enable Eve topics heating/coolingThreshold
- enablePredict = true; // try to predict time remaining until start/stop
+	enablePredict = true; // try to predict time remaining until start/stop
 
  print("Starting Ferme de Pommerieux's ShellyPlus1 Thermostat Script");
  // detach the input : we don't need it
@@ -161,11 +161,12 @@
  	}
  };
 
- function heatControl() {
+ function heatControl(predict) {
  	//	if (dataHasChanged) validateTargetData(); // to validate the target values
  	if (targetHeatingCoolingState === "HEAT") {
  		if ((currentTemperature < coolingThresholdTemperature) &&
- 			(currentHeatingCoolingState !== "HEAT")) { // does nothing if already heating
+ 			(currentHeatingCoolingState !== "HEAT") ||
+ 				(predict === "HEAT")) { // does nothing if already heating
  			print("CurrentTemperature", currentTemperature, " is lower than ",
  				coolingThresholdTemperature,
  				", starting heater");
@@ -184,7 +185,8 @@
  				});
  			}
  		} else if ((currentTemperature > heatingThresholdTemperature) &&
- 			(currentHeatingCoolingState === "HEAT")) {
+ 			(currentHeatingCoolingState === "HEAT") ||
+ 				(predict === "OFF")) {
  			print("CurrentTemperature", currentTemperature, " is higher than",
  				heatingThresholdTemperature,
  				", stoping heater");
@@ -252,21 +254,19 @@
  	}
  	oldTime = currentTime;
  	// ok now, predict when to start/stop heating
- 	if (sensorLatency !== null) {
+ 	if ((sensorLatency !== null ) && (willStartTime !== null) && (willStopTime !== null)) {
  		//  clear Timers, in case a temperature sensor reports a new value
  		Timer.clear(predictTimer_handle);
  		if ((currentHeatingCoolingState === "OFF") && (willStartTime < sensorLatency) &&
  			(willStartTime > 0)) {
  			predictTimer_handle = Timer.set(willStartTime, false, function() {
- 				currentTemperature = coolingThresholdTemperature - 0.1;
- 				heatControl();
+				heatControl("HEAT");
  			});
  		} else if ((currentHeatingCoolingState === "HEAT") && (willStopTime <
  				sensorLatency) &&
  			(willStopTime > 0)) {
- 			predictTimer_handle = Timer.set(willStartTime, false, function() {
- 				currentTemperature = heatingThresholdTemperature + 0.1;
- 				heatControl();
+ 			predictTimer_handle = Timer.set(willStopTime, false, function() {
+				heatControl("OFF");
  			});
  		}
  	}
@@ -319,13 +319,13 @@
  					hysteresisCoolingTemperature = minHysteresisHeatingCoolingTemperature;
  					heatingThresholdTemperature = targetTemperature +
  						hysteresisHeatingTemperature;
- 				} else if ((message + minHysteresisHeatingTemperature >
+ 				} else if ((message + minHysteresisHeatingCoolingTemperature >
  						maxAllowedTemperature) ||
  					(message + hysteresisHeatingTemperature > maxAllowedTemperature)) {
  					targetTemperature = maxAllowedTemperature -
- 						minHysteresisHeatingTemperature;
+ 						minHysteresisHeatingCoolingTemperature;
  					heatingThresholdTemperature = maxAllowedTemperature;
- 					hysteresisHeatingTemperature = minHysteresisHeatingTemperature;
+ 					hysteresisHeatingTemperature = minHysteresisHeatingCoolingTemperature;
  					coolingThresholdTemperature = targetTemperature -
  						hysteresisCoolingTemperature;
  				} else {
