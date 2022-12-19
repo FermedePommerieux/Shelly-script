@@ -1,24 +1,24 @@
  // This script makes ShellyPlus1 act as an MQTT heat-only thermostat
  // it will read and publish the following MQTT topics
  /*
-   	"getCurrentHeatingCoolingState": "shellyplus1-XXXXXXXXXXXX/thermostat/currentHeatingCoolingState",
-   	"setTargetHeatingCoolingState": "shellyplus1-XXXXXXXXXXXX/thermostat/targetHeatingCoolingState",
-   	"getTargetHeatingCoolingState": "shellyplus1-XXXXXXXXXXXX/thermostat/targetHeatingCoolingState",
-   	"getCurrentTemperature": "shellyplus1-XXXXXXXXXXXX/thermostat/currentTemperature",
-   	"setTargetTemperature": "shellyplus1-XXXXXXXXXXXX/thermostat/targetTemperature",
-   	"getTargetTemperature": "shellyplus1-XXXXXXXXXXXX/thermostat/targetTemperature",
-   	
-  Opt	"setCoolingThresholdTemperature": "shellyplus1-XXXXXXXXXXXX/thermostat/coolingThresholdTemperature"
-  Opt	"getCoolingThresholdTemperature": "shellyplus1-XXXXXXXXXXXX/thermostat/coolingThresholdTemperature",
-  Opt	"setHeatingThresholdTemperature": "shellyplus1-XXXXXXXXXXXX/thermostat/heatingThresholdTemperature"
-  Opt	"getHeatingThresholdTemperature": "shellyplus1-XXXXXXXXXXXX/thermostat/ingThresholdTemperature"
-  Opt	"getHeatingThresholdTemperature": "shellyplus1-XXXXXXXXXXXX/thermostat/hysteresisCoolingTemperature"
-  Opt	"getHeatingThresholdTemperature": "shellyplus1-XXXXXXXXXXXX/thermostat/hysteresisHeatingTemperature"
+    	"getCurrentHeatingCoolingState": "shellyplus1-XXXXXXXXXXXX/thermostat/currentHeatingCoolingState",
+    	"setTargetHeatingCoolingState": "shellyplus1-XXXXXXXXXXXX/thermostat/targetHeatingCoolingState",
+    	"getTargetHeatingCoolingState": "shellyplus1-XXXXXXXXXXXX/thermostat/targetHeatingCoolingState",
+    	"getCurrentTemperature": "shellyplus1-XXXXXXXXXXXX/thermostat/currentTemperature",
+    	"setTargetTemperature": "shellyplus1-XXXXXXXXXXXX/thermostat/targetTemperature",
+    	"getTargetTemperature": "shellyplus1-XXXXXXXXXXXX/thermostat/targetTemperature",
+    	
+   Opt	"setCoolingThresholdTemperature": "shellyplus1-XXXXXXXXXXXX/thermostat/coolingThresholdTemperature"
+   Opt	"getCoolingThresholdTemperature": "shellyplus1-XXXXXXXXXXXX/thermostat/coolingThresholdTemperature",
+   Opt	"setHeatingThresholdTemperature": "shellyplus1-XXXXXXXXXXXX/thermostat/heatingThresholdTemperature"
+   Opt	"getHeatingThresholdTemperature": "shellyplus1-XXXXXXXXXXXX/thermostat/ingThresholdTemperature"
+   Opt	"getHeatingThresholdTemperature": "shellyplus1-XXXXXXXXXXXX/thermostat/hysteresisCoolingTemperature"
+   Opt	"getHeatingThresholdTemperature": "shellyplus1-XXXXXXXXXXXX/thermostat/hysteresisHeatingTemperature"
 
-  Opt	"getHeatingThresholdTemperature": "shellyplus1-XXXXXXXXXXXX/thermostat/willStart" in s
-  Opt	"getHeatingThresholdTemperature": "shellyplus1-XXXXXXXXXXXX/thermostat/willStop" in s
-  Opt	"getHeatingThresholdTemperature": "shellyplus1-XXXXXXXXXXXX/thermostat/dTdt" means instant deltaTemp/deltatime 
-      */
+   Opt	"getHeatingThresholdTemperature": "shellyplus1-XXXXXXXXXXXX/thermostat/willStart" in s
+   Opt	"getHeatingThresholdTemperature": "shellyplus1-XXXXXXXXXXXX/thermostat/willStop" in s
+   Opt	"getHeatingThresholdTemperature": "shellyplus1-XXXXXXXXXXXX/thermostat/dTdt" means instant deltaTemp/deltatime 
+       */
  // Do not use extra topic in homebridge if you don't use it, otherwise it will mess your thermostat
  // Start/Stop time prediction could be enable for test only 
  // define config values, time are in ms and degree in celsius.
@@ -30,11 +30,13 @@
  	minAllowedTemperature = 16,
  	maxAllowedTemperature = 24,
  	minHysteresisHeatingCoolingTemperature = 0.5,
- 	useExternalSensor = true,
+ 	useExternalSensor = false,
  	topicExternalSensor = 'shellyplusht-c049ef8e1ddc/events/rpc',
+ 	topicInternalSensor = "temperature:100",
  	restoreData = true, // set to false to use local declared target at startup
  	enableExtra = true // Enable Eve topics heating/coolingThreshold
-	enablePredict = true; // try to predict time remaining until start/stop
+ enablePredict = true, // try to predict time remaining until start/stop
+ 	enblePrerdictHeatControl = false; // Start/Stop heater on predict time instead of waiting to rise threshold temperatures
 
  print("Starting Ferme de Pommerieux's ShellyPlus1 Thermostat Script");
  // detach the input : we don't need it
@@ -166,7 +168,7 @@
  	if (targetHeatingCoolingState === "HEAT") {
  		if ((currentTemperature < coolingThresholdTemperature) &&
  			(currentHeatingCoolingState !== "HEAT") ||
- 				(predict === "HEAT")) { // does nothing if already heating
+ 			(predict === "HEAT")) { // does nothing if already heating
  			print("CurrentTemperature", currentTemperature, " is lower than ",
  				coolingThresholdTemperature,
  				", starting heater");
@@ -186,7 +188,7 @@
  			}
  		} else if ((currentTemperature > heatingThresholdTemperature) &&
  			(currentHeatingCoolingState === "HEAT") ||
- 				(predict === "OFF")) {
+ 			(predict === "OFF")) {
  			print("CurrentTemperature", currentTemperature, " is higher than",
  				heatingThresholdTemperature,
  				", stoping heater");
@@ -254,23 +256,26 @@
  	}
  	oldTime = currentTime;
  	// ok now, predict when to start/stop heating
- 	if ((sensorLatency !== null ) && (willStartTime !== null) && (willStopTime !== null)) {
- 		//  clear Timers, in case a temperature sensor reports a new value
- 		Timer.clear(predictTimer_handle);
- 		if ((currentHeatingCoolingState === "OFF") && (willStartTime < sensorLatency) &&
- 			(willStartTime > 0)) {
- 			predictTimer_handle = Timer.set(willStartTime, false, function() {
-				heatControl("HEAT");
- 			});
- 		} else if ((currentHeatingCoolingState === "HEAT") && (willStopTime <
- 				sensorLatency) &&
- 			(willStopTime > 0)) {
- 			predictTimer_handle = Timer.set(willStopTime, false, function() {
-				heatControl("OFF");
- 			});
+ 	if (enablePredictHeatControl) {
+ 		if ((sensorLatency !== null) && (willStartTime !== null) && (willStopTime !==
+ 				null)) {
+ 			//  clear Timers, in case a temperature sensor reports a new value
+ 			Timer.clear(predictTimer_handle);
+ 			if ((currentHeatingCoolingState === "OFF") && (willStartTime <
+ 					sensorLatency) &&
+ 				(willStartTime > 0)) {
+ 				predictTimer_handle = Timer.set(willStartTime, false, function() {
+ 					heatControl("HEAT");
+ 				});
+ 			} else if ((currentHeatingCoolingState === "HEAT") && (willStopTime <
+ 					sensorLatency) &&
+ 				(willStopTime > 0)) {
+ 				predictTimer_handle = Timer.set(willStopTime, false, function() {
+ 					heatControl("OFF");
+ 				});
+ 			}
  		}
  	}
-
  };
 
  // create the thermostat function to load it in a timer
@@ -474,7 +479,7 @@
  			if (typeof message.params["temperature:0"] === "undefined")
  				return;
  			oldTemperature = currentTemperature;
- 			currentTemperature = message.params["temperature:0"].tC;
+ 			currentTemperature = message.params[topicInternalSensor].tC;
  			print(
  				"external temperature sensor has reported a currentTemperature :",
  				currentTemperature);
