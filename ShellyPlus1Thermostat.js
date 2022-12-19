@@ -36,7 +36,7 @@
  	restoreData = true, // set to false to use local declared target at startup
  	enableExtra = true // Enable Eve topics heating/coolingThreshold
 	enablePredict = true, // try to predict time remaining until start/stop
-	enblePrerdictHeatControl = false; // Start/Stop heater on predict time instead of waiting to rise threshold temperatures
+	enablePredictHeatControl = false; // Start/Stop heater on predict time instead of waiting to rise threshold temperatures
 
  print("Starting Ferme de Pommerieux's ShellyPlus1 Thermostat Script");
  // detach the input : we don't need it
