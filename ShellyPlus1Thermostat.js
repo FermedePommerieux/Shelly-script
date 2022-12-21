@@ -191,7 +191,7 @@
  		// here we use median values and max/min in somes cases:
  		// check if we have external data or data are not too old (20 minutes)
  		if ((typeof externalTS === "number") && (currentTime - externalTS < 20 * 60 *
- 				1000)) { // not too old
+ 				1000) && (typeof currentExternalTemperature === "number" )) { // not too old
  			oldTemperature = currentTemperature;
  			currentTemperature = (currentInternalTemperature +
  				currentExternalTemperature) / 2;
@@ -209,6 +209,7 @@
  				currentExternalTemperature;
  		} else { // externalTemperature is old/unavailable, can't use it
  			print("External temperature not available, using internal only");
+ 			oldTemperature = currentTemperature;
  			currentTemperature = currentInternalTemperature;
  		}
  	}
